@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.contato import Contato
 from app.schemas.contato import ContatoCreate, ContatoResponse
+from app.services.email_service import enviar_email_novo_contato
 
 
 router = APIRouter(
@@ -13,7 +14,9 @@ router = APIRouter(
     tags=["Contatos"],
 )
 
-MDP_EMPRESA_ID = UUID("4ac04902-ee2b-4b18-b99a-b5b3bbefaa40")
+MDP_EMPRESA_ID = UUID(
+    "4ac04902-ee2b-4b18-b99a-b5b3bbefaa40"
+)
 
 
 @router.post(
@@ -23,6 +26,7 @@ MDP_EMPRESA_ID = UUID("4ac04902-ee2b-4b18-b99a-b5b3bbefaa40")
 )
 def criar_contato(
     dados: ContatoCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     contato = Contato(
@@ -39,5 +43,10 @@ def criar_contato(
     db.add(contato)
     db.commit()
     db.refresh(contato)
+
+    background_tasks.add_task(
+        enviar_email_novo_contato,
+        contato,
+    )
 
     return contato
