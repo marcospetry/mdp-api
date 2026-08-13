@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
@@ -6,7 +7,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.contato import Contato
 from app.schemas.contato import ContatoCreate, ContatoResponse
-from app.services.email_service import enviar_email_novo_contato
+from app.services.email_service import (
+    enviar_email_confirmacao_contato,
+    enviar_email_novo_contato,
+)
 
 
 router = APIRouter(
@@ -31,13 +35,27 @@ def criar_contato(
 ):
     contato = Contato(
         empresa_id=MDP_EMPRESA_ID,
+
         nome=dados.nome,
         email=str(dados.email),
         telefone=dados.telefone,
         empresa_contato=dados.empresa_contato,
         mensagem=dados.mensagem,
+
         origem="site",
         status="novo",
+
+        tipo_solicitacao=dados.tipo_solicitacao,
+        cnpj=dados.cnpj,
+        cidade=dados.cidade,
+        uf=dados.uf,
+        site_instagram=dados.site_instagram,
+        segmento=dados.segmento,
+        objetivos=dados.objetivos or None,
+
+        consentimento_dados=dados.consentimento_dados,
+        consentimento_em=datetime.now(timezone.utc),
+        consentimento_versao=dados.consentimento_versao,
     )
 
     db.add(contato)
@@ -46,6 +64,11 @@ def criar_contato(
 
     background_tasks.add_task(
         enviar_email_novo_contato,
+        contato,
+    )
+
+    background_tasks.add_task(
+        enviar_email_confirmacao_contato,
         contato,
     )
 

@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -39,6 +39,39 @@ class Contato(Base):
         String(30),
         nullable=False,
         default="novo",
+    )
+
+    tipo_solicitacao = Column(
+        String(30),
+        nullable=False,
+        default="CONTATO",
+    )
+
+    cnpj = Column(String(20), nullable=True)
+    cidade = Column(String(120), nullable=True)
+    uf = Column(String(2), nullable=True)
+    site_instagram = Column(String(255), nullable=True)
+    segmento = Column(String(150), nullable=True)
+
+    objetivos = Column(
+        ARRAY(Text),
+        nullable=True,
+    )
+
+    consentimento_dados = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    consentimento_em = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    consentimento_versao = Column(
+        String(30),
+        nullable=True,
     )
 
     created_at = Column(
