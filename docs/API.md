@@ -183,3 +183,43 @@ Prioridade imediata:
 `POST /api/contatos`
 
 A implementação deverá utilizar a tabela `contatos` já existente, sem recriar sua estrutura.
+
+
+---
+
+## Evolução 17/08/2026 — contatos e interações
+
+### Decisão
+
+A base MDP não será uma cópia integral do Chatwoot. O Chatwoot continua sendo a caixa operacional e pode receber mensagens sem valor cadastral, como testes, spam, trotes ou um simples “oi” ainda não qualificado.
+
+O formulário do site é diferente: seu envio é uma manifestação explícita de interesse. Por isso, `POST /api/contatos` continua criando o contato diretamente na base MDP e passa a criar, na mesma transação, uma linha em `interacoes`.
+
+### Regras implementadas
+
+- `contatos` representa a pessoa/contato conhecido pela MDP;
+- `interacoes` representa ocorrências relevantes associadas ao contato;
+- formulário do site cria `contato + interação` atomicamente;
+- WhatsApp/e-mail/Instagram via Chatwoot somente deverão entrar na base MDP após qualificação;
+- `chatwoot_contact_id` permite vinculação futura sem obrigar todos os contatos a nascerem no Chatwoot;
+- `origem_primeiro_contato` preserva aquisição e `origem_ultimo_contato` permite acompanhar o canal mais recente;
+- `diagnosticos.contato_id`, criado pela Migration 001, passa a permitir o vínculo entre diagnóstico e contato oficial.
+
+### Compatibilidade
+
+Os campos legados do formulário em `contatos` não foram removidos nesta fase. Isso evita quebrar o site e a API existentes. A separação definitiva desses dados poderá ocorrer em migration futura, depois que o novo fluxo estiver estabilizado.
+
+### Transação do formulário
+
+Fluxo atual:
+
+```text
+POST /api/contatos
+  -> INSERT contatos
+  -> flush (obtém contato.id sem commit)
+  -> INSERT interacoes
+  -> commit único
+  -> envio de e-mails em background
+```
+
+Assim, se a criação da interação falhar, o contato também não é confirmado parcialmente.

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.contato import Contato
+from app.models.interacao import Interacao
 from app.schemas.contato import ContatoCreate, ContatoResponse
 from app.services.email_service import (
     enviar_email_confirmacao_contato,
@@ -43,6 +44,8 @@ def criar_contato(
         mensagem=dados.mensagem,
 
         origem="site",
+        origem_primeiro_contato="site",
+        origem_ultimo_contato="site",
         status="novo",
 
         tipo_solicitacao=dados.tipo_solicitacao,
@@ -59,6 +62,27 @@ def criar_contato(
     )
 
     db.add(contato)
+
+    # Precisamos do UUID do contato para criar a interação, mas ainda não
+    # queremos confirmar a transação. O flush executa o INSERT e mantém
+    # contato + interação dentro da mesma unidade atômica.
+    db.flush()
+
+    interacao = Interacao(
+        empresa_id=MDP_EMPRESA_ID,
+        contato_id=contato.id,
+        canal="SITE",
+        origem="formulario_site",
+        tipo_interacao="FORMULARIO_SITE",
+        mensagem=dados.mensagem,
+        direcao="ENTRADA",
+        classificacao=dados.tipo_solicitacao,
+    )
+
+    db.add(interacao)
+
+    # Um único commit evita contato sem interação caso algum dos INSERTs
+    # falhe. Os e-mails continuam sendo disparados somente após o sucesso.
     db.commit()
     db.refresh(contato)
 

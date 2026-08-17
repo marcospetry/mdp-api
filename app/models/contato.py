@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.sql import func
 
@@ -24,16 +24,22 @@ class Contato(Base):
     )
 
     nome = Column(String(150), nullable=False)
-    email = Column(String(150), nullable=False)
+    email = Column(String(150), nullable=True)
     telefone = Column(String(30), nullable=True)
     empresa_contato = Column(String(150), nullable=True)
-    mensagem = Column(Text, nullable=False)
+    mensagem = Column(Text, nullable=True)
 
     origem = Column(
         String(50),
         nullable=False,
         default="site",
     )
+
+    # Integração futura com Chatwoot. O ID fica nulo para contatos que
+    # nasceram diretamente pelo formulário/site.
+    chatwoot_contact_id = Column(BigInteger, nullable=True)
+    origem_primeiro_contato = Column(String(50), nullable=True)
+    origem_ultimo_contato = Column(String(50), nullable=True)
 
     status = Column(
         String(30),
