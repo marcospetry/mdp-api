@@ -17,6 +17,7 @@ if database_url.startswith("postgresql://"):
 engine = create_engine(
     database_url,
     pool_pre_ping=True,
+    connect_args={"connect_timeout": 5} if database_url.startswith("postgresql+") else {},
 )
 
 
