@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security.dependencies import get_current_context
 from app.models.diagnostico import (
     CategoriaDiagnostico,
     OpcaoPerguntaDiagnostico,
@@ -26,6 +27,7 @@ from app.schemas.diagnostico import (
 router = APIRouter(
     prefix="/api/diagnostico",
     tags=["Diagnóstico - Catálogo"],
+    dependencies=[Depends(get_current_context)],
 )
 
 

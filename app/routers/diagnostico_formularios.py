@@ -5,6 +5,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security.dependencies import get_current_context
 from app.models.diagnostico import (
     CategoriaDiagnostico,
     FormularioDiagnostico,
@@ -25,6 +26,7 @@ from app.schemas.diagnostico import (
 router = APIRouter(
     prefix="/api/diagnostico/formularios",
     tags=["Diagnóstico - Formulários"],
+    dependencies=[Depends(get_current_context)],
 )
 
 

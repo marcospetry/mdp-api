@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MDP Consultoria | Acesso</title>
+  <link rel="stylesheet" href="/admin-assets/login.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="brand-panel" aria-label="MDP Consultoria">
+      <img class="logo" src="/admin-assets/logo-mdp.png" alt="MDP Consultoria">
+      <p class="eyebrow">DADOS • PROCESSOS • SISTEMAS • AUTOMAÇÃO • IA</p>
+      <h1>Acesso à plataforma MDP</h1>
+      <p class="brand-copy">
+        Administração, diagnósticos e recursos autorizados da sua empresa em um único acesso.
+      </p>
+      <div class="security-note">
+        <span class="shield">✓</span>
+        <span>Contas administrativas podem exigir verificação em duas etapas.</span>
+      </div>
+    </section>
+
+    <section class="auth-panel">
+      <div class="card">
+        <div id="loginStep" class="step">
+          <p class="kicker">Acesso seguro</p>
+          <h2>Entrar</h2>
+          <p class="muted">Use seu e-mail e senha cadastrados na MDP.</p>
+
+          <form id="loginForm" novalidate>
+            <label for="email">E-mail</label>
+            <input id="email" type="email" autocomplete="username" required autofocus>
+
+            <label for="senha">Senha</label>
+            <div class="password-wrap">
+              <input id="senha" type="password" autocomplete="current-password" required>
+              <button id="togglePassword" type="button" class="text-button" aria-label="Mostrar ou ocultar senha">Mostrar</button>
+            </div>
+
+            <button id="loginButton" class="primary" type="submit">Entrar</button>
+          </form>
+        </div>
+
+        <div id="mfaStep" class="step hidden">
+          <button id="backToLogin" type="button" class="back-button">← Voltar</button>
+          <p class="kicker">Verificação de segurança</p>
+          <h2>Código de 6 dígitos</h2>
+          <p class="muted">Digite o código atual do seu aplicativo autenticador.</p>
+
+          <form id="mfaForm" novalidate>
+            <label for="mfaCode">Código</label>
+            <input
+              id="mfaCode"
+              class="otp"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              placeholder="000000"
+              required
+            >
+            <button id="mfaButton" class="primary" type="submit">Verificar e entrar</button>
+          </form>
+        </div>
+
+        <div id="mfaSetupStep" class="step hidden">
+          <button id="backFromSetup" type="button" class="back-button">← Voltar</button>
+          <p class="kicker">Primeiro acesso</p>
+          <h2>Ativar verificação em duas etapas</h2>
+          <p class="muted">
+            Cadastre a chave abaixo no Google Authenticator ou outro aplicativo TOTP.
+          </p>
+
+          <div class="setup-box">
+            <span class="setup-label">Nome sugerido</span>
+            <strong>MDP Consultoria</strong>
+
+            <span class="setup-label">Tipo</span>
+            <strong>Baseada em horário</strong>
+
+            <span class="setup-label">Chave</span>
+            <div class="secret-row">
+              <code id="mfaSecret"></code>
+              <button id="copySecret" type="button" class="text-button">Copiar</button>
+            </div>
+          </div>
+
+          <form id="mfaSetupForm" novalidate>
+            <label for="mfaSetupCode">Código gerado no aplicativo</label>
+            <input
+              id="mfaSetupCode"
+              class="otp"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              placeholder="000000"
+              required
+            >
+            <button id="mfaSetupButton" class="primary" type="submit">Confirmar MFA e entrar</button>
+          </form>
+        </div>
+
+        <div id="dashboardStep" class="step hidden">
+          <div class="dashboard-head">
+            <div>
+              <p class="kicker">Sessão autenticada</p>
+              <h2 id="welcomeName">Bem-vindo</h2>
+            </div>
+            <span class="status-pill">Online</span>
+          </div>
+
+          <div class="profile-grid">
+            <div>
+              <span>Empresa</span>
+              <strong id="companyId">—</strong>
+            </div>
+            <div>
+              <span>Perfil</span>
+              <strong id="profileName">—</strong>
+            </div>
+            <div>
+              <span>Superadmin</span>
+              <strong id="superadminFlag">—</strong>
+            </div>
+            <div>
+              <span>E-mail</span>
+              <strong id="userEmail">—</strong>
+            </div>
+          </div>
+
+          <div class="placeholder">
+            <strong>Backoffice MDP</strong>
+            <p>
+              A autenticação já está funcional. Os módulos administrativos serão conectados aqui na próxima etapa.
+            </p>
+          </div>
+
+          <button id="logoutButton" class="secondary" type="button">Sair</button>
+        </div>
+
+        <div id="message" class="message hidden" role="alert"></div>
+      </div>
+
+      <p class="footer">MDP Consultoria • acesso autorizado</p>
+    </section>
+  </main>
+
+  <script src="/admin-assets/login.js"></script>
+</body>
+</html>
