@@ -9,11 +9,12 @@ from app.routers.contatos import router as contatos_router
 from app.routers.auth import router as auth_router
 from app.routers.diagnostico_catalogo import router as diagnostico_catalogo_router
 from app.routers.diagnostico_formularios import router as diagnostico_formularios_router
+from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
 
 
 app = FastAPI(
     title="MDP API",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 
@@ -39,6 +40,7 @@ app.include_router(contatos_router)
 app.include_router(auth_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)
+app.include_router(diagnostico_estrutura_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
@@ -64,5 +66,5 @@ def health():
     return {
         "status": "ok",
         "service": "mdp-api",
-        "version": "0.4.0",
+        "version": "0.5.0",
     }
