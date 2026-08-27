@@ -12,6 +12,7 @@ from app.models.diagnostico import (
     FaixaAvaliacaoNumero,
     OpcaoPerguntaDiagnostico,
     PerguntaDiagnostico,
+    RespostaDiagnostico,
 )
 from app.schemas.diagnostico import (
     CategoriaCreate,
@@ -97,6 +98,7 @@ def _detalhe_pergunta(db: Session, pergunta: PerguntaDiagnostico) -> PerguntaDet
         categoria_nome=categoria.nome,
         opcoes=[OpcaoResponse.model_validate(o) for o in opcoes],
         faixas=[FaixaResponse.model_validate(f) for f in faixas],
+        utilizada_em_resposta=_pergunta_utilizada_em_resposta(db, pergunta.id),
     )
 
 
@@ -120,6 +122,40 @@ def listar_categorias(
     return query.order_by(CategoriaDiagnostico.ordem, CategoriaDiagnostico.nome).all()
 
 
+def _categoria_mesmo_escopo_query(db: Session, empresa_id: UUID | None):
+    query = db.query(CategoriaDiagnostico)
+    if empresa_id is None:
+        return query.filter(CategoriaDiagnostico.empresa_id.is_(None))
+    return query.filter(CategoriaDiagnostico.empresa_id == empresa_id)
+
+
+def _ordens_ativas_categoria(db: Session, empresa_id: UUID | None, ignorar_id: UUID | None = None) -> set[int]:
+    query = _categoria_mesmo_escopo_query(db, empresa_id).filter(CategoriaDiagnostico.ativo.is_(True))
+    if ignorar_id is not None:
+        query = query.filter(CategoriaDiagnostico.id != ignorar_id)
+    return {int(c.ordem) for c in query.all() if c.ordem is not None and int(c.ordem) > 0}
+
+
+def _proxima_ordem_categoria(db: Session, empresa_id: UUID | None, ignorar_id: UUID | None = None) -> int:
+    usadas = _ordens_ativas_categoria(db, empresa_id, ignorar_id)
+    ordem = 1
+    while ordem in usadas:
+        ordem += 1
+    return ordem
+
+
+def _pergunta_utilizada_em_resposta(db: Session, pergunta_id: UUID) -> bool:
+    return db.query(RespostaDiagnostico.id).filter(RespostaDiagnostico.pergunta_id == pergunta_id).first() is not None
+
+
+def _validar_pergunta_editavel(db: Session, pergunta_id: UUID):
+    if _pergunta_utilizada_em_resposta(db, pergunta_id):
+        raise HTTPException(
+            status_code=409,
+            detail="Esta pergunta já possui respostas em diagnósticos e está congelada. Crie uma nova pergunta para alterar seu significado.",
+        )
+
+
 @router.post("/categorias", response_model=CategoriaResponse, status_code=status.HTTP_201_CREATED)
 def criar_categoria(dados: CategoriaCreate, db: Session = Depends(get_db)):
     existente = (
@@ -132,7 +168,9 @@ def criar_categoria(dados: CategoriaCreate, db: Session = Depends(get_db)):
     )
     if existente:
         raise HTTPException(status_code=409, detail="Já existe categoria com esse nome.")
-    categoria = CategoriaDiagnostico(**dados.model_dump())
+    payload = dados.model_dump()
+    payload["ordem"] = _proxima_ordem_categoria(db, dados.empresa_id)
+    categoria = CategoriaDiagnostico(**payload)
     categoria.nome = categoria.nome.strip()
     db.add(categoria)
     try:
@@ -151,7 +189,19 @@ def obter_categoria(categoria_id: UUID, db: Session = Depends(get_db)):
 @router.put("/categorias/{categoria_id}", response_model=CategoriaResponse)
 def atualizar_categoria(categoria_id: UUID, dados: CategoriaUpdate, db: Session = Depends(get_db)):
     categoria = _categoria_ou_404(db, categoria_id)
-    for campo, valor in dados.model_dump(exclude_unset=True).items():
+    alteracoes = dados.model_dump(exclude_unset=True)
+
+    if "ordem" in alteracoes and alteracoes["ordem"] is not None and int(alteracoes["ordem"]) != int(categoria.ordem):
+        raise HTTPException(status_code=409, detail="A ordem da categoria é controlada automaticamente.")
+
+    if alteracoes.get("ativo") is True and not categoria.ativo:
+        usadas = _ordens_ativas_categoria(db, categoria.empresa_id, ignorar_id=categoria.id)
+        if int(categoria.ordem) in usadas:
+            categoria.ordem = _proxima_ordem_categoria(db, categoria.empresa_id, ignorar_id=categoria.id)
+
+    alteracoes.pop("ordem", None)
+
+    for campo, valor in alteracoes.items():
         if campo == "nome" and valor is not None:
             valor = valor.strip()
         setattr(categoria, campo, valor)
@@ -252,6 +302,7 @@ def obter_pergunta(pergunta_id: UUID, db: Session = Depends(get_db)):
 @router.put("/perguntas/{pergunta_id}", response_model=PerguntaDetalheResponse)
 def atualizar_pergunta(pergunta_id: UUID, dados: PerguntaUpdate, db: Session = Depends(get_db)):
     pergunta = _pergunta_ou_404(db, pergunta_id)
+    _validar_pergunta_editavel(db, pergunta_id)
     alteracoes = dados.model_dump(exclude_unset=True)
     if "categoria_id" in alteracoes and alteracoes["categoria_id"] is not None:
         _categoria_ou_404(db, alteracoes["categoria_id"])
@@ -295,6 +346,7 @@ def atualizar_pergunta(pergunta_id: UUID, dados: PerguntaUpdate, db: Session = D
 @router.delete("/perguntas/{pergunta_id}", response_model=PerguntaResponse)
 def desativar_pergunta(pergunta_id: UUID, db: Session = Depends(get_db)):
     pergunta = _pergunta_ou_404(db, pergunta_id)
+    _validar_pergunta_editavel(db, pergunta_id)
     pergunta.ativo = False
     db.commit()
     db.refresh(pergunta)
@@ -315,6 +367,7 @@ def listar_opcoes(pergunta_id: UUID, db: Session = Depends(get_db)):
 @router.post("/perguntas/{pergunta_id}/opcoes", response_model=OpcaoResponse, status_code=status.HTTP_201_CREATED)
 def criar_opcao(pergunta_id: UUID, dados: OpcaoCreate, db: Session = Depends(get_db)):
     pergunta = _pergunta_ou_404(db, pergunta_id)
+    _validar_pergunta_editavel(db, pergunta_id)
     _validar_opcao_para_pergunta(pergunta, dados.estado_interno)
     existente = db.query(OpcaoPerguntaDiagnostico).filter(
         OpcaoPerguntaDiagnostico.pergunta_id == pergunta_id,
@@ -336,6 +389,7 @@ def criar_opcao(pergunta_id: UUID, dados: OpcaoCreate, db: Session = Depends(get
 def atualizar_opcao(opcao_id: UUID, dados: OpcaoUpdate, db: Session = Depends(get_db)):
     opcao = _opcao_ou_404(db, opcao_id)
     pergunta = _pergunta_ou_404(db, opcao.pergunta_id)
+    _validar_pergunta_editavel(db, pergunta.id)
     alteracoes = dados.model_dump(exclude_unset=True)
     estado_final = alteracoes.get("estado_interno", opcao.estado_interno)
     _validar_opcao_para_pergunta(pergunta, estado_final)
@@ -352,6 +406,7 @@ def atualizar_opcao(opcao_id: UUID, dados: OpcaoUpdate, db: Session = Depends(ge
 @router.delete("/opcoes/{opcao_id}", response_model=OpcaoResponse)
 def desativar_opcao(opcao_id: UUID, db: Session = Depends(get_db)):
     opcao = _opcao_ou_404(db, opcao_id)
+    _validar_pergunta_editavel(db, opcao.pergunta_id)
     opcao.ativo = False
     db.commit()
     db.refresh(opcao)

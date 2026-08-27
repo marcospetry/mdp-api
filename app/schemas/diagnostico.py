@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 TipoResposta = Literal["ESCOLHA_UNICA", "MULTIPLA_ESCOLHA", "NUMERO", "TEXTO_CURTO"]
 NaturezaPergunta = Literal["AVALIATIVA", "CONTEXTO"]
@@ -174,6 +174,17 @@ class PerguntaDetalheResponse(PerguntaResponse):
     categoria_nome: str
     opcoes: list[OpcaoResponse] = Field(default_factory=list)
     faixas: list[FaixaResponse] = Field(default_factory=list)
+    utilizada_em_resposta: bool = False
+
+
+TIPOS_FORMULARIO = {"BASICO", "RAPIDO", "AVANCADO", "ESPECIFICO", "TESTE"}
+
+
+def _normalizar_tipo_formulario(valor: str) -> str:
+    valor = valor.strip().upper()
+    if valor not in TIPOS_FORMULARIO:
+        raise ValueError("Tipo de formulário inválido.")
+    return valor
 
 
 class FormularioBase(BaseModel):
@@ -181,6 +192,11 @@ class FormularioBase(BaseModel):
     nome: str = Field(min_length=1, max_length=150)
     descricao: str | None = None
     tipo: str = Field(min_length=1, max_length=50)
+
+    @field_validator("tipo")
+    @classmethod
+    def validar_tipo(cls, valor: str) -> str:
+        return _normalizar_tipo_formulario(valor)
     versao: int = Field(default=1, ge=1)
     ativo: bool = True
     empresa_id: UUID | None = None
@@ -195,6 +211,12 @@ class FormularioUpdate(BaseModel):
     nome: str | None = Field(default=None, min_length=1, max_length=150)
     descricao: str | None = None
     tipo: str | None = Field(default=None, min_length=1, max_length=50)
+
+    @field_validator("tipo")
+    @classmethod
+    def validar_tipo(cls, valor: str | None) -> str | None:
+        return None if valor is None else _normalizar_tipo_formulario(valor)
+
     versao: int | None = Field(default=None, ge=1)
     ativo: bool | None = None
 
@@ -203,8 +225,31 @@ class FormularioResponse(FormularioBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    utilizado_em_diagnostico: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class FormularioNovaVersaoRequest(BaseModel):
+    nome: str | None = Field(default=None, min_length=1, max_length=150)
+    descricao: str | None = None
+    ativo: bool = True
+
+
+class FormularioCloneRequest(BaseModel):
+    codigo: str = Field(min_length=1, max_length=50)
+    nome: str = Field(min_length=1, max_length=150)
+    descricao: str | None = None
+    tipo: str = Field(min_length=1, max_length=50)
+
+    @field_validator("tipo")
+    @classmethod
+    def validar_tipo(cls, valor: str) -> str:
+        return _normalizar_tipo_formulario(valor)
+
+    versao: int = Field(default=1, ge=1)
+    ativo: bool = True
+    empresa_id: UUID | None = None
 
 
 class FormularioPerguntaCreate(BaseModel):

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MDP Consultoria | Acesso</title>
-  <link rel="stylesheet" href="/admin-assets/login.css">
+  <link rel="stylesheet" href="/admin-assets/login-v016.css">
 </head>
 <body>
   <main class="shell">
@@ -102,42 +102,524 @@
           </form>
         </div>
 
-        <div id="dashboardStep" class="step hidden">
-          <div class="dashboard-head">
-            <div>
-              <p class="kicker">Sessão autenticada</p>
-              <h2 id="welcomeName">Bem-vindo</h2>
+        <div id="dashboardStep" class="step hidden admin-step">
+          <header class="admin-topbar">
+            <div class="admin-brand">
+              <img src="/admin-assets/logo-mdp.png" alt="MDP Consultoria">
+              <div><strong>MDP Backoffice</strong><span>Diagnóstico</span></div>
             </div>
-            <span class="status-pill">Online</span>
+
+            <nav class="admin-menu">
+              <button type="button" class="admin-menu-button" data-admin-view="home">Início</button>
+              <div class="admin-dropdown-wrap">
+                <button type="button" class="admin-menu-button">Diagnóstico ▾</button>
+                <div class="admin-dropdown">
+                  <button type="button" data-admin-view="categorias">Categorias</button>
+                  <button type="button" data-admin-view="perguntas">Perguntas</button>
+                  <button type="button" data-admin-view="formularios">Formulários</button>
+                </div>
+              </div>
+            </nav>
+
+            <div class="admin-session">
+              <span class="status-pill">Online</span>
+              <button id="logoutButton" class="admin-logout" type="button">Sair</button>
+            </div>
+          </header>
+
+          <div class="admin-content">
+            <section id="adminHome" class="admin-view">
+              <div class="dashboard-head">
+                <div>
+                  <p class="kicker">Sessão autenticada</p>
+                  <h2 id="welcomeName">Bem-vindo</h2>
+                </div>
+              </div>
+
+              <div class="profile-grid">
+                <div><span>Empresa</span><strong id="companyId">—</strong></div>
+                <div><span>Perfil</span><strong id="profileName">—</strong></div>
+                <div><span>Superadmin</span><strong id="superadminFlag">—</strong></div>
+                <div><span>E-mail</span><strong id="userEmail">—</strong></div>
+              </div>
+
+              <div class="admin-module-grid">
+                <button type="button" class="admin-module-card" data-admin-view="categorias">
+                  <b>▦</b><strong>Categorias</strong>
+                  <span>Áreas utilizadas para organizar o diagnóstico.</span>
+                </button>
+                <button type="button" class="admin-module-card" data-admin-view="perguntas">
+                  <b>?</b><strong>Perguntas</strong>
+                  <span>Perguntas, respostas e regras de avaliação.</span>
+                </button>
+                <button type="button" class="admin-module-card" data-admin-view="formularios">
+                  <b>☷</b><strong>Formulários</strong>
+                  <span>Monte e versione formulários com drag-and-drop e regras condicionais.</span>
+                </button>
+              </div>
+            </section>
+
+            <section id="adminCategorias" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Diagnóstico › Categorias</p>
+                  <h2>Categorias</h2>
+                  <p class="muted">Cadastro das áreas usadas para organizar as perguntas.</p>
+                </div>
+                <button type="button" id="novaCategoria" class="admin-primary">+ Nova categoria</button>
+              </div>
+
+              <div class="admin-toolbar">
+                <input id="buscaCategoria" placeholder="Buscar categoria...">
+                <select id="filtroCategoriaStatus">
+                  <option value="">Todas</option>
+                  <option value="true" selected>Ativas</option>
+                  <option value="false">Inativas</option>
+                </select>
+              </div>
+              <div id="listaCategorias" class="admin-list"></div>
+            </section>
+
+            <section id="adminPerguntas" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Diagnóstico › Perguntas</p>
+                  <h2>Perguntas</h2>
+                  <p class="muted">Catálogo reutilizável de perguntas e configuração das respostas.</p>
+                </div>
+                <button type="button" id="novaPergunta" class="admin-primary">+ Nova pergunta</button>
+              </div>
+
+              <div class="admin-toolbar questions">
+                <input id="buscaPergunta" placeholder="Código ou texto...">
+                <select id="filtroCategoriaPergunta"><option value="">Todas as categorias</option></select>
+                <select id="filtroTipoPergunta">
+                  <option value="">Todos os tipos</option>
+                  <option value="ESCOLHA_UNICA">Resposta única</option>
+                  <option value="MULTIPLA_ESCOLHA">Múltiplas respostas</option>
+                  <option value="NUMERO">Número</option>
+                  <option value="TEXTO_CURTO">Texto curto</option>
+                </select>
+                <select id="filtroNaturezaPergunta">
+                  <option value="">Todas as naturezas</option>
+                  <option value="AVALIATIVA">Avaliativa</option>
+                  <option value="CONTEXTO">Contexto</option>
+                </select>
+              </div>
+              <div id="listaPerguntas" class="admin-list"></div>
+            </section>
+
+            <section id="adminFormularios" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Diagnóstico › Formulários</p>
+                  <h2>Formulários</h2>
+                  <p class="muted">Modelos versionados reutilizáveis. Monte perguntas e regras de exibição.</p>
+                </div>
+                <button type="button" id="novoFormulario" class="admin-primary">+ Novo formulário</button>
+              </div>
+
+              <div class="admin-toolbar">
+                <input id="buscaFormulario" placeholder="Código ou nome do formulário...">
+                <select id="filtroFormularioStatus">
+                  <option value="">Todos</option>
+                  <option value="true" selected>Ativos</option>
+                  <option value="false">Inativos</option>
+                </select>
+              </div>
+
+              <div id="listaFormularios" class="admin-list"></div>
+            </section>
+
+            <section id="adminBuilder" class="admin-view hidden">
+              <div class="builder-titlebar">
+                <div>
+                  <button type="button" id="voltarFormularios" class="admin-secondary compact">← Formulários</button>
+                  <p class="kicker">Form Builder</p>
+                  <h2 id="builderTitulo">Formulário</h2>
+                  <p id="builderDescricao" class="muted"></p>
+                </div>
+                <div class="builder-title-actions">
+                  <span id="builderResumo" class="builder-summary"></span>
+                  <button type="button" id="abrirPreview" class="admin-primary">Pré-visualizar</button>
+                </div>
+              </div>
+
+              <div class="builder-grid-real">
+                <aside class="builder-panel">
+                  <div class="builder-panel-head">
+                    <div>
+                      <h3>Catálogo</h3>
+                      <p>Selecione a categoria e arraste perguntas para o formulário.</p>
+                    </div>
+                  </div>
+
+                  <input id="builderBusca" placeholder="Buscar pergunta...">
+                  <select id="builderCategoria"><option value="">Todas as categorias</option></select>
+                  <select id="builderNatureza">
+                    <option value="">Todas as naturezas</option>
+                    <option value="CONTEXTO">Contexto</option>
+                    <option value="AVALIATIVA">Avaliativa</option>
+                  </select>
+
+                  <div id="builderCatalogo" class="builder-catalogo"></div>
+                </aside>
+
+                <section class="builder-panel builder-form-panel">
+                  <div class="builder-panel-head">
+                    <div>
+                      <h3>Perguntas do formulário</h3>
+                      <p>Arraste para ordenar. Clique em uma pergunta para configurá-la.</p>
+                    </div>
+                  </div>
+                  <div id="builderFormDrop" class="builder-drop-zone"></div>
+                </section>
+
+                <aside class="builder-panel builder-config-panel">
+                  <div id="builderConfigVazio" class="builder-empty">
+                    Selecione uma pergunta do formulário para configurar.
+                  </div>
+
+                  <div id="builderConfig" class="hidden">
+                    <small id="builderCfgCodigo" class="builder-code"></small>
+                    <h3 id="builderCfgPergunta"></h3>
+                    <p id="builderCfgMeta" class="muted"></p>
+
+                    <label class="builder-switch">
+                      <span>Obrigatória neste formulário</span>
+                      <input id="builderCfgObrigatoria" type="checkbox">
+                    </label>
+
+                    <div class="builder-divider"></div>
+
+                    <div id="builderRulesBlock">
+                      <h3>Regras de exibição</h3>
+                      <p class="muted">Configure o que deve aparecer quando cada resposta for selecionada.</p>
+                      <div id="builderRulesEditor"></div>
+                    </div>
+
+                    <div id="builderNoRules" class="admin-note hidden">
+                      Esta pergunta não possui opções de resposta que possam disparar regras.
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </section>
+
+            <section id="adminBuilderPreview" class="admin-view hidden">
+              <div class="builder-titlebar">
+                <div>
+                  <button type="button" id="voltarBuilder" class="admin-secondary compact">← Voltar ao Builder</button>
+                  <p class="kicker">Pré-visualização</p>
+                  <h2 id="previewTitulo">Formulário</h2>
+                  <p class="muted">Simulação local. Não cria diagnóstico e não salva respostas.</p>
+                </div>
+                <span id="previewProgresso" class="builder-summary"></span>
+              </div>
+              <div class="builder-preview-card">
+                <div id="previewConteudo"></div>
+              </div>
+            </section>
           </div>
 
-          <div class="profile-grid">
-            <div>
-              <span>Empresa</span>
-              <strong id="companyId">—</strong>
-            </div>
-            <div>
-              <span>Perfil</span>
-              <strong id="profileName">—</strong>
-            </div>
-            <div>
-              <span>Superadmin</span>
-              <strong id="superadminFlag">—</strong>
-            </div>
-            <div>
-              <span>E-mail</span>
-              <strong id="userEmail">—</strong>
-            </div>
-          </div>
+          <dialog id="dlgClonarFormulario" class="admin-dialog">
+            <form id="formClonarFormulario">
+              <div class="dialog-head">
+                <div>
+                  <h3>Clonar formulário</h3>
+                  <p id="cloneOrigemInfo">Crie um novo formulário copiando perguntas, ordem, obrigatoriedade e regras.</p>
+                </div>
+                <button type="button" class="dialog-close" data-close="dlgClonarFormulario">×</button>
+              </div>
 
-          <div class="placeholder">
-            <strong>Backoffice MDP</strong>
-            <p>
-              A autenticação já está funcional. Os módulos administrativos serão conectados aqui na próxima etapa.
-            </p>
-          </div>
+              <input type="hidden" id="cloneFormularioOrigemId">
 
-          <button id="logoutButton" class="secondary" type="button">Sair</button>
+              <div class="admin-form-row">
+                <label>Novo código *
+                  <input id="cloneCodigo" maxlength="50" required>
+                </label>
+                <label>Versão *
+                  <input id="cloneVersao" type="number" min="1" value="1" readonly required>
+                </label>
+              </div>
+
+              <label>Novo nome *
+                <input id="cloneNome" maxlength="150" required>
+              </label>
+
+              <label>Descrição
+                <textarea id="cloneDescricao" rows="3"></textarea>
+              </label>
+
+              <div class="admin-form-row">
+                <label>Tipo *
+                  <select id="cloneTipo" required>
+                    <option value="BASICO">Básico</option>
+                    <option value="RAPIDO">Rápido</option>
+                    <option value="AVANCADO">Avançado</option>
+                    <option value="ESPECIFICO">Específico</option>
+                    <option value="TESTE">Teste</option>
+                  </select>
+                </label>
+                <label>Status
+                  <select id="cloneAtivo">
+                    <option value="true">Ativo</option>
+                    <option value="false">Inativo</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="admin-note">
+                As perguntas do catálogo não são duplicadas. O novo formulário recebe novas associações e novas regras apontando para as mesmas perguntas/opções reutilizáveis.
+              </div>
+
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgClonarFormulario">Cancelar</button>
+                <button type="submit" class="admin-primary">Clonar e abrir</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgBuilderSelecionarPerguntas" class="admin-dialog builder-modal">
+            <form id="formBuilderSelecionarPerguntas">
+              <div class="dialog-head">
+                <div>
+                  <h3>Adicionar perguntas condicionais</h3>
+                  <p id="builderModalContexto">Selecione as perguntas que devem aparecer.</p>
+                </div>
+                <button type="button" class="dialog-close" data-close="dlgBuilderSelecionarPerguntas">×</button>
+              </div>
+
+              <div class="builder-modal-filters">
+                <label>Categoria
+                  <select id="builderModalCategoria"><option value="">Todas as categorias</option></select>
+                </label>
+                <label>Natureza
+                  <select id="builderModalNatureza">
+                    <option value="">Todas</option>
+                    <option value="CONTEXTO">Contexto</option>
+                    <option value="AVALIATIVA">Avaliativa</option>
+                  </select>
+                </label>
+                <label>Tipo
+                  <select id="builderModalTipo">
+                    <option value="">Todos</option>
+                    <option value="ESCOLHA_UNICA">Resposta única</option>
+                    <option value="MULTIPLA_ESCOLHA">Múltipla escolha</option>
+                    <option value="NUMERO">Número</option>
+                    <option value="TEXTO_CURTO">Texto curto</option>
+                  </select>
+                </label>
+                <label>Disponibilidade
+                  <select id="builderModalDisponibilidade">
+                    <option value="">Todas</option>
+                    <option value="NO_FORMULARIO">Já no formulário</option>
+                    <option value="FORA_FORMULARIO">Fora do formulário</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="builder-modal-search-row">
+                <label>Buscar
+                  <input id="builderModalBusca" placeholder="Código ou texto da pergunta...">
+                </label>
+                <button type="button" id="builderModalNovaPergunta" class="admin-primary">+ Nova pergunta</button>
+              </div>
+
+              <div class="builder-modal-legend">
+                <span>✓ já está no formulário</span>
+                <span>＋ será adicionada ao formulário</span>
+                <span>🔒 bloqueada: criaria loop</span>
+              </div>
+
+              <div id="builderModalLista" class="builder-modal-list"></div>
+
+              <div class="dialog-actions builder-modal-actions">
+                <span id="builderModalSelecionadas" class="builder-inline-status">0 selecionada(s)</span>
+                <button type="button" class="admin-secondary" data-close="dlgBuilderSelecionarPerguntas">Cancelar</button>
+                <button type="submit" class="admin-primary">Adicionar selecionadas</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgFormulario" class="admin-dialog">
+            <form id="formFormulario">
+              <div class="dialog-head">
+                <div>
+                  <h3 id="tituloFormulario">Novo formulário</h3>
+                  <p>Crie o modelo e depois abra o Builder para selecionar as perguntas.</p>
+                </div>
+                <button type="button" class="dialog-close" data-close="dlgFormulario">×</button>
+              </div>
+
+              <input type="hidden" id="formularioId">
+
+              <div class="admin-form-row">
+                <label>Código *
+                  <input id="formularioCodigo" maxlength="50" placeholder="Ex.: FORM_TESTE" required>
+                </label>
+                <label>Versão *
+                  <input id="formularioVersao" type="number" min="1" value="1" readonly required>
+                </label>
+              </div>
+
+              <label>Nome *
+                <input id="formularioNome" maxlength="150" placeholder="Ex.: Formulário Teste" required>
+              </label>
+
+              <label>Descrição
+                <textarea id="formularioDescricao" rows="3"></textarea>
+              </label>
+
+              <div class="admin-form-row">
+                <label>Tipo *
+                  <select id="formularioTipo" required>
+                    <option value="BASICO">Básico</option>
+                    <option value="RAPIDO">Rápido</option>
+                    <option value="AVANCADO">Avançado</option>
+                    <option value="ESPECIFICO">Específico</option>
+                    <option value="TESTE">Teste</option>
+                  </select>
+                </label>
+                <label>Status
+                  <select id="formularioAtivo">
+                    <option value="true">Ativo</option>
+                    <option value="false">Inativo</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgFormulario">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgCategoria" class="admin-dialog">
+            <form id="formCategoria">
+              <div class="dialog-head">
+                <div><h3 id="tituloCategoria">Nova categoria</h3><p>Cadastro básico da área do diagnóstico.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgCategoria">×</button>
+              </div>
+              <input type="hidden" id="categoriaId">
+              <label>Nome *<input id="categoriaNome" maxlength="120" required></label>
+              <label>Descrição<textarea id="categoriaDescricao" rows="3"></textarea></label>
+              <div class="admin-form-row">
+                <label>Ordem<input id="categoriaOrdem" type="number" min="1" value="1" readonly required></label>
+                <label>Status<select id="categoriaAtiva"><option value="true">Ativa</option><option value="false">Inativa</option></select></label>
+              </div>
+              <div class="admin-note"><strong>Escopo:</strong> nesta versão o cadastro cria categorias globais MDP.</div>
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgCategoria">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgPergunta" class="admin-dialog wide">
+            <form id="formPergunta">
+              <div class="dialog-head">
+                <div><h3 id="tituloPergunta">Nova pergunta</h3><p>Configure a pergunta, suas respostas e a interpretação pelo motor.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgPergunta">×</button>
+              </div>
+              <input type="hidden" id="perguntaId">
+
+              <fieldset>
+                <legend>1. Identificação</legend>
+                <div class="admin-form-row">
+                  <label>Código<input id="perguntaCodigo" maxlength="30" placeholder="Ex.: PD001"></label>
+                  <label>Categoria *<select id="perguntaCategoria" required></select></label>
+                </div>
+                <label>Pergunta *<textarea id="perguntaTexto" rows="2" required></textarea></label>
+                <label>Ajuda / orientação<textarea id="perguntaAjuda" rows="2"></textarea></label>
+                <div class="admin-form-row">
+                  <label>Tipo da resposta
+                    <select id="perguntaTipo">
+                      <option value="ESCOLHA_UNICA">Resposta única</option>
+                      <option value="MULTIPLA_ESCOLHA">Múltiplas respostas</option>
+                      <option value="NUMERO">Número</option>
+                      <option value="TEXTO_CURTO">Texto curto</option>
+                    </select>
+                  </label>
+                  <label>Influencia a avaliação?
+                    <select id="perguntaNatureza">
+                      <option value="AVALIATIVA">Sim — avaliativa</option>
+                      <option value="CONTEXTO">Não — contexto</option>
+                    </select>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset id="blocoAvaliacao">
+                <legend>2. Avaliação</legend>
+                <label>Cenário ideal *<textarea id="perguntaIdeal" rows="3"></textarea></label>
+                <label>Recomendação padrão *<textarea id="perguntaSugestao" rows="3"></textarea></label>
+              </fieldset>
+
+              <fieldset id="blocoOpcoes">
+                <legend>3. Opções de resposta</legend>
+                <div class="fieldset-toolbar">
+                  <span>Arraste pelo símbolo ☰ para reordenar.</span>
+                  <button type="button" id="addOpcao" class="admin-secondary compact">+ Adicionar opção</button>
+                </div>
+                <div id="listaOpcoes" class="options-list"></div>
+              </fieldset>
+
+              <fieldset id="blocoFaixas" class="hidden">
+                <legend>3. Faixas numéricas</legend>
+                <div class="fieldset-toolbar">
+                  <span>Limites vazios representam faixa aberta.</span>
+                  <button type="button" id="addFaixa" class="admin-secondary compact">+ Adicionar faixa</button>
+                </div>
+                <div id="listaFaixas" class="ranges-list"></div>
+              </fieldset>
+
+              <label class="check-label"><input id="perguntaAtiva" type="checkbox" checked> Pergunta ativa</label>
+
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgPergunta">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar pergunta</button>
+              </div>
+            </form>
+          </dialog>
+
+          <template id="tplOpcao">
+            <div class="option-row" draggable="true">
+              <div class="drag-handle">☰</div>
+              <div>
+                <label>Texto exibido<input class="opt-rotulo" maxlength="150" required></label>
+                <div class="admin-form-row">
+                  <label>Valor interno<input class="opt-valor" maxlength="80" required></label>
+                  <label>Interpretação
+                    <select class="opt-estado">
+                      <option value="">Sem avaliação</option>
+                      <option value="ALTO">Ponto forte — ALTO</option>
+                      <option value="MEDIO">Atende parcialmente — MEDIO</option>
+                      <option value="BAIXO">Lacuna / problema — BAIXO</option>
+                      <option value="NA">Não se aplica — NA</option>
+                      <option value="NAO_SEI">Precisa confirmar — NAO_SEI</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <button type="button" class="dialog-close remove-option">×</button>
+            </div>
+          </template>
+
+          <template id="tplFaixa">
+            <div class="range-row">
+              <label>De<input class="range-min" type="number" step="any" placeholder="aberto"></label>
+              <label>Até<input class="range-max" type="number" step="any" placeholder="aberto"></label>
+              <label>Interpretação
+                <select class="range-estado" required>
+                  <option value="ALTO">ALTO</option><option value="MEDIO">MEDIO</option>
+                  <option value="BAIXO">BAIXO</option><option value="NA">NA</option><option value="NAO_SEI">NAO_SEI</option>
+                </select>
+              </label>
+              <button type="button" class="dialog-close remove-range">×</button>
+            </div>
+          </template>
         </div>
 
         <div id="message" class="message hidden" role="alert"></div>
@@ -147,6 +629,6 @@
     </section>
   </main>
 
-  <script src="/admin-assets/login.js"></script>
+  <script src="/admin-assets/login-v016.js"></script>
 </body>
 </html>
