@@ -46,6 +46,8 @@ class UsuarioEmpresa(Base):
     empresa_id = Column(UUID(as_uuid=True), ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False)
     perfil_id = Column(UUID(as_uuid=True), ForeignKey("perfis.id"), nullable=False)
     ativo = Column(Boolean, nullable=False, default=True)
+    acesso_todas_unidades = Column(Boolean, nullable=False, default=False)
+    acesso_todas_areas = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     perfil = relationship("Perfil")

@@ -33,6 +33,7 @@ class Interacao(Base):
 
     canal = Column(String(30), nullable=False)
     origem = Column(String(50), nullable=True)
+    tipo_interacao_id = Column(UUID(as_uuid=True), ForeignKey("tipos_interacao.id", ondelete="RESTRICT"), nullable=True)
     tipo_interacao = Column(String(30), nullable=False, default="MENSAGEM")
     mensagem = Column(Text, nullable=True)
     direcao = Column(String(15), nullable=True)

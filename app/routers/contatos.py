@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
-from uuid import UUID
-
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.contato import Contato
+from app.models.empresa import Empresa
 from app.models.interacao import Interacao
+from app.models.manutencao import OrigemContato, TipoInteracao
 from app.schemas.contato import ContatoCreate, ContatoResponse
 from app.services.email_service import (
     enviar_email_confirmacao_contato,
@@ -19,9 +19,7 @@ router = APIRouter(
     tags=["Contatos"],
 )
 
-MDP_EMPRESA_ID = UUID(
-    "4ac04902-ee2b-4b18-b99a-b5b3bbefaa40"
-)
+SEM_EMPRESA_SLUG = "sem-empresa"
 
 
 @router.post(
@@ -34,8 +32,24 @@ def criar_contato(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    empresa_inicial = (
+        db.query(Empresa)
+        .filter(Empresa.slug == SEM_EMPRESA_SLUG)
+        .first()
+    )
+    if not empresa_inicial:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail="Empresa técnica 'sem-empresa' não encontrada.",
+        )
+
+    origem_site = db.query(OrigemContato).filter(OrigemContato.empresa_id.is_(None), OrigemContato.codigo == "SITE", OrigemContato.ativo.is_(True)).first()
+    tipo_form = db.query(TipoInteracao).filter(TipoInteracao.empresa_id.is_(None), TipoInteracao.codigo == "FORMULARIO_SITE", TipoInteracao.ativo.is_(True)).first()
+
     contato = Contato(
-        empresa_id=MDP_EMPRESA_ID,
+        empresa_id=empresa_inicial.id,
+        origem_contato_id=origem_site.id if origem_site else None,
 
         nome=dados.nome,
         email=str(dados.email),
@@ -69,10 +83,11 @@ def criar_contato(
     db.flush()
 
     interacao = Interacao(
-        empresa_id=MDP_EMPRESA_ID,
+        empresa_id=empresa_inicial.id,
         contato_id=contato.id,
         canal="SITE",
         origem="formulario_site",
+        tipo_interacao_id=tipo_form.id if tipo_form else None,
         tipo_interacao="FORMULARIO_SITE",
         mensagem=dados.mensagem,
         direcao="ENTRADA",

@@ -10,6 +10,9 @@ from app.routers.auth import router as auth_router
 from app.routers.diagnostico_catalogo import router as diagnostico_catalogo_router
 from app.routers.diagnostico_formularios import router as diagnostico_formularios_router
 from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
+from app.routers.admin_empresas_contatos import router as admin_empresas_contatos_router
+from app.routers.admin_organizacao import router as admin_organizacao_router
+from app.routers.admin_manutencao import router as admin_manutencao_router
 
 
 app = FastAPI(
@@ -41,6 +44,9 @@ app.include_router(auth_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)
 app.include_router(diagnostico_estrutura_router)
+app.include_router(admin_empresas_contatos_router)
+app.include_router(admin_organizacao_router)
+app.include_router(admin_manutencao_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"

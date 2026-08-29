@@ -29,6 +29,8 @@ class Contato(Base):
     empresa_contato = Column(String(150), nullable=True)
     mensagem = Column(Text, nullable=True)
 
+    origem_contato_id = Column(UUID(as_uuid=True), ForeignKey("origens_contato.id", ondelete="RESTRICT"), nullable=True)
+
     origem = Column(
         String(50),
         nullable=False,

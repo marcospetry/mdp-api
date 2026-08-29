@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MDP Consultoria | Acesso</title>
-  <link rel="stylesheet" href="/admin-assets/login-v016.css">
+  <link rel="stylesheet" href="/admin-assets/login-v018.css">
 </head>
 <body>
   <main class="shell">
@@ -111,8 +111,18 @@
 
             <nav class="admin-menu">
               <button type="button" class="admin-menu-button" data-admin-view="home">Início</button>
+              <button type="button" class="admin-menu-button" data-admin-view="empresas">Empresas</button>
+              <button type="button" class="admin-menu-button" data-admin-view="contatos">Contatos</button>
               <div class="admin-dropdown-wrap">
-                <button type="button" class="admin-menu-button">Diagnóstico ▾</button>
+                <button type="button" class="admin-menu-button">Manutenção ▾</button>
+                <div class="admin-dropdown">
+                  <button type="button" data-admin-view="origensContato">Origens de Contato</button>
+                  <button type="button" data-admin-view="tiposInteracao">Tipos de Interação</button>
+                </div>
+              </div>
+              <div class="admin-menu-separator" aria-hidden="true"></div>
+              <div class="admin-dropdown-wrap">
+                <button type="button" class="admin-menu-button">Perguntas / Respostas ▾</button>
                 <div class="admin-dropdown">
                   <button type="button" data-admin-view="categorias">Categorias</button>
                   <button type="button" data-admin-view="perguntas">Perguntas</button>
@@ -144,6 +154,14 @@
               </div>
 
               <div class="admin-module-grid">
+                <button type="button" class="admin-module-card" data-admin-view="empresas">
+                  <b>▣</b><strong>Empresas</strong>
+                  <span>Prospects, clientes e organizações vinculadas aos contatos.</span>
+                </button>
+                <button type="button" class="admin-module-card" data-admin-view="contatos">
+                  <b>◎</b><strong>Contatos</strong>
+                  <span>Pessoas, origem, qualificação e vínculo com empresas.</span>
+                </button>
                 <button type="button" class="admin-module-card" data-admin-view="categorias">
                   <b>▦</b><strong>Categorias</strong>
                   <span>Áreas utilizadas para organizar o diagnóstico.</span>
@@ -157,6 +175,65 @@
                   <span>Monte e versione formulários com drag-and-drop e regras condicionais.</span>
                 </button>
               </div>
+            </section>
+
+            <section id="adminEmpresas" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Cadastro › Empresas</p>
+                  <h2>Empresas</h2>
+                  <p class="muted">Organizações em avaliação, clientes e empresas descartadas.</p>
+                </div>
+                <button type="button" id="novaEmpresa" class="admin-primary">+ Nova empresa</button>
+              </div>
+              <div class="admin-toolbar companies">
+                <input id="buscaEmpresa" placeholder="Buscar por nome, CNPJ, domínio ou e-mail...">
+                <select id="filtroEmpresaStatus">
+                  <option value="">Todos os status</option>
+                  <option value="EM_AVALIACAO">Em avaliação</option>
+                  <option value="CLIENTE">Cliente</option>
+                  <option value="DESCARTADA">Descartada</option>
+                </select>
+                <select id="filtroEmpresaAtivo">
+                  <option value="true" selected>Ativas</option>
+                  <option value="">Todas</option>
+                  <option value="false">Inativas</option>
+                </select>
+              </div>
+              <div id="listaEmpresas" class="admin-list"></div>
+            </section>
+
+            <section id="adminContatos" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Cadastro › Contatos</p>
+                  <h2>Contatos</h2>
+                  <p class="muted">Pessoas captadas pelos canais da MDP ou cadastradas manualmente.</p>
+                </div>
+                <button type="button" id="novoContato" class="admin-primary">+ Novo contato</button>
+              </div>
+              <div class="admin-toolbar contacts">
+                <input id="buscaContato" placeholder="Buscar nome, e-mail, telefone, CNPJ ou empresa informada...">
+                <select id="filtroContatoStatus">
+                  <option value="">Todos os status</option>
+                  <option value="NOVO">Novo</option>
+                  <option value="EM_ANALISE">Em análise</option>
+                  <option value="QUALIFICADO">Qualificado</option>
+                  <option value="DESCARTADO">Descartado</option>
+                </select>
+                <select id="filtroContatoEmpresa"><option value="">Todas as empresas</option></select>
+              </div>
+              <div id="listaContatos" class="admin-list"></div>
+            </section>
+
+            <section id="adminOrigensContato" class="admin-view hidden">
+              <div class="admin-page-head"><div><p class="kicker">Manutenção</p><h2>Origens de Contato</h2><p class="muted">Origens disponíveis para o cadastro de contatos.</p></div><button type="button" id="novaOrigemContato" class="admin-primary">+ Nova origem</button></div>
+              <div id="listaOrigensContato" class="admin-list"></div>
+            </section>
+
+            <section id="adminTiposInteracao" class="admin-view hidden">
+              <div class="admin-page-head"><div><p class="kicker">Manutenção</p><h2>Tipos de Interação</h2><p class="muted">Tipos disponíveis para classificar interações.</p></div><button type="button" id="novoTipoInteracao" class="admin-primary">+ Novo tipo</button></div>
+              <div id="listaTiposInteracao" class="admin-list"></div>
             </section>
 
             <section id="adminCategorias" class="admin-view hidden">
@@ -321,6 +398,138 @@
               </div>
             </section>
           </div>
+
+          <dialog id="dlgEmpresa" class="admin-dialog wide">
+            <form id="formEmpresa">
+              <div class="dialog-head">
+                <div><h3 id="tituloEmpresa">Nova empresa</h3><p>Cadastre ou atualize a organização.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgEmpresa">×</button>
+              </div>
+              <input type="hidden" id="empresaId">
+              <div class="admin-form-row">
+                <label>Nome *<input id="empresaNome" maxlength="150" required></label>
+                <label>CNPJ<input id="empresaCnpj" maxlength="20"></label>
+              </div>
+              <div class="admin-form-row">
+                <label>E-mail<input id="empresaEmail" type="email" maxlength="150"></label>
+                <label>Telefone<input id="empresaTelefone" maxlength="30"></label>
+              </div>
+              <div class="admin-form-row">
+                <label>Domínio<input id="empresaDominio" maxlength="255" placeholder="empresa.com.br"></label>
+                <label>Status<select id="empresaStatus"><option value="EM_AVALIACAO">Em avaliação</option><option value="CLIENTE">Cliente</option><option value="DESCARTADA">Descartada</option></select></label>
+              </div>
+              <label class="check-label"><input id="empresaAtiva" type="checkbox" checked> Empresa ativa</label>
+              <div id="empresaFichaBloco" class="hidden company-dossier">
+                <div class="company-tabs" role="tablist">
+                  <button type="button" class="company-tab active" data-company-tab="geral">Visão Geral</button>
+                  <button type="button" class="company-tab" data-company-tab="unidades">Unidades</button>
+                  <button type="button" class="company-tab" data-company-tab="areas">Áreas</button>
+                  <button type="button" class="company-tab" data-company-tab="contatos">Contatos</button>
+                </div>
+                <section class="company-tab-panel" data-company-panel="geral">
+                  <div id="empresaResumoEstrutura" class="company-summary-grid"></div>
+                </section>
+                <section class="company-tab-panel hidden" data-company-panel="unidades">
+                  <div class="company-panel-head"><div><strong>Unidades</strong><span>Estrutura opcional da empresa.</span></div><button type="button" id="novaUnidade" class="admin-secondary">+ Nova unidade</button></div>
+                  <div id="empresaUnidadesResumo" class="admin-linked-list"></div>
+                </section>
+                <section class="company-tab-panel hidden" data-company-panel="areas">
+                  <div class="company-panel-head"><div><strong>Áreas</strong><span>Corporativas ou vinculadas a uma unidade.</span></div><button type="button" id="novaArea" class="admin-secondary">+ Nova área</button></div>
+                  <div id="empresaAreasResumo" class="admin-linked-list"></div>
+                </section>
+                <section class="company-tab-panel hidden" data-company-panel="contatos">
+                  <div class="company-panel-head"><div><strong>Contatos vinculados</strong><span>Pessoas relacionadas a esta empresa.</span></div></div>
+                  <div id="empresaContatosResumo" class="admin-linked-list"></div>
+                </section>
+              </div>
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgEmpresa">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar empresa</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgUnidade" class="admin-dialog wide">
+            <form id="formUnidade">
+              <div class="dialog-head"><div><h3 id="tituloUnidade">Nova unidade</h3><p>Unidade opcional vinculada à empresa.</p></div><button type="button" class="dialog-close" data-close="dlgUnidade">×</button></div>
+              <input type="hidden" id="unidadeId">
+              <div class="admin-form-row"><label>Código *<input id="unidadeCodigo" maxlength="50" required></label><label>Tipo *<select id="unidadeTipo" required></select></label></div>
+              <div class="admin-form-row"><label>Nome *<input id="unidadeNome" maxlength="150" required></label><label>Nome fantasia<input id="unidadeFantasia" maxlength="150"></label></div>
+              <div class="admin-form-row"><label>CNPJ<input id="unidadeCnpj" maxlength="20"></label><label>E-mail<input id="unidadeEmail" type="email" maxlength="150"></label></div>
+              <div class="admin-form-row"><label>Telefone<input id="unidadeTelefone" maxlength="30"></label><label>CEP<input id="unidadeCep" maxlength="10"></label></div>
+              <div class="admin-form-row"><label>Logradouro<input id="unidadeLogradouro" maxlength="180"></label><label>Número<input id="unidadeNumero" maxlength="30"></label></div>
+              <div class="admin-form-row"><label>Complemento<input id="unidadeComplemento" maxlength="100"></label><label>Bairro<input id="unidadeBairro" maxlength="100"></label></div>
+              <div class="admin-form-row"><label>Cidade<input id="unidadeCidade" maxlength="120"></label><label>UF<input id="unidadeUf" maxlength="2"></label></div>
+              <label class="check-label"><input id="unidadeAtiva" type="checkbox" checked> Unidade ativa</label>
+              <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgUnidade">Cancelar</button><button type="submit" class="admin-primary">Salvar unidade</button></div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgArea" class="admin-dialog wide">
+            <form id="formArea">
+              <div class="dialog-head"><div><h3 id="tituloArea">Nova área</h3><p>Área corporativa ou vinculada a uma unidade.</p></div><button type="button" class="dialog-close" data-close="dlgArea">×</button></div>
+              <input type="hidden" id="areaId">
+              <div class="admin-form-row"><label>Código *<input id="areaCodigo" maxlength="50" required></label><label>Nome *<input id="areaNome" maxlength="150" required></label></div>
+              <div class="admin-form-row"><label>Escopo *<select id="areaEscopo"><option value="CORPORATIVA">Corporativa</option><option value="UNIDADE">Unidade</option></select></label><label id="areaUnidadeLabel" class="hidden">Unidade *<select id="areaUnidade"></select></label></div>
+              <div class="admin-form-row"><label>Ordem *<input id="areaOrdem" type="number" min="1" required></label><label class="check-label"><input id="areaAtiva" type="checkbox" checked> Área ativa</label></div>
+              <label>Descrição<textarea id="areaDescricao" rows="3"></textarea></label>
+              <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgArea">Cancelar</button><button type="submit" class="admin-primary">Salvar área</button></div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgCatalogoManutencao" class="admin-dialog">
+            <form id="formCatalogoManutencao">
+              <div class="dialog-head"><div><h3 id="tituloCatalogoManutencao">Cadastro</h3></div><button type="button" class="dialog-close" data-close="dlgCatalogoManutencao">×</button></div>
+              <input type="hidden" id="catalogoTipo"><input type="hidden" id="catalogoId">
+              <div class="admin-form-row"><label>Código *<input id="catalogoCodigo" maxlength="50" required></label><label>Nome *<input id="catalogoNome" maxlength="120" required></label></div>
+              <div class="admin-form-row"><label>Ordem<input id="catalogoOrdem" type="number" min="1"></label><label>Descrição<input id="catalogoDescricao"></label></div>
+              <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgCatalogoManutencao">Cancelar</button><button type="submit" class="admin-primary">Salvar</button></div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgContato" class="admin-dialog wide">
+            <form id="formContato">
+              <div class="dialog-head">
+                <div><h3 id="tituloContato">Novo contato</h3><p>Dados da pessoa, qualificação e vínculo empresarial.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgContato">×</button>
+              </div>
+              <input type="hidden" id="contatoId">
+              <div class="admin-form-row">
+                <label>Nome *<input id="contatoNome" maxlength="150" required></label>
+                <label>Empresa vinculada<select id="contatoEmpresa"><option value="">Sem empresa identificada</option></select></label>
+              </div>
+              <div class="admin-form-row">
+                <label>E-mail<input id="contatoEmail" type="email" maxlength="150"></label>
+                <label>Telefone<input id="contatoTelefone" maxlength="30"></label>
+              </div>
+              <div class="admin-form-row">
+                <label>Empresa informada<input id="contatoEmpresaInformada" maxlength="150"></label>
+                <label>CNPJ informado<input id="contatoCnpj" maxlength="20"></label>
+              </div>
+              <div class="admin-form-row">
+                <label>Status<select id="contatoStatus"><option value="NOVO">Novo</option><option value="EM_ANALISE">Em análise</option><option value="QUALIFICADO">Qualificado</option><option value="DESCARTADO">Descartado</option></select></label>
+                <label>Tipo de solicitação<select id="contatoTipo"><option value="CONTATO">Contato</option><option value="DIAGNOSTICO">Diagnóstico</option></select></label>
+              </div>
+              <div class="admin-form-row">
+                <label>Origem do contato<select id="contatoOrigem"><option value="">Carregando...</option></select></label>
+                <label>Segmento<input id="contatoSegmento" maxlength="150"></label>
+              </div>
+              <div class="admin-form-row">
+                <label>Cidade<input id="contatoCidade" maxlength="120"></label>
+                <label>UF<input id="contatoUf" maxlength="2"></label>
+              </div>
+              <label>Site / Instagram<input id="contatoSiteInstagram" maxlength="255"></label>
+              <label>Mensagem<textarea id="contatoMensagem" rows="3"></textarea></label>
+              <div id="contatoAcoesEmpresa" class="contact-company-actions hidden">
+                <div class="admin-note">Se os dados de empresa/CNPJ vieram do formulário, você pode criar a empresa em avaliação e vincular este contato automaticamente.</div>
+                <button type="button" id="criarEmpresaDoContato" class="admin-secondary">Criar empresa a partir deste contato</button>
+              </div>
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgContato">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar contato</button>
+              </div>
+            </form>
+          </dialog>
 
           <dialog id="dlgClonarFormulario" class="admin-dialog">
             <form id="formClonarFormulario">
@@ -629,6 +838,6 @@
     </section>
   </main>
 
-  <script src="/admin-assets/login-v016.js"></script>
+  <script src="/admin-assets/login-v018.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -11,6 +11,7 @@ class Empresa(Base):
     id = Column(
         UUID(as_uuid=True),
         primary_key=True,
+        server_default=text("gen_random_uuid()"),
     )
 
     nome = Column(String(150), nullable=False)
@@ -19,6 +20,7 @@ class Empresa(Base):
     email = Column(String(150), nullable=True)
     telefone = Column(String(30), nullable=True)
     dominio = Column(String(255), nullable=True)
+    status = Column(String(30), nullable=False, default="EM_AVALIACAO")
 
     ativo = Column(
         Boolean,

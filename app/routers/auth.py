@@ -235,6 +235,8 @@ def logout(
     context=Depends(get_current_context),
     db: Session = Depends(get_db),
 ):
+    if context.get("dev_auth_bypass"):
+        return {"status": "ok", "modo": "DEV_AUTH_BYPASS"}
     sessao = context["sessao"]
     revoke_session(sessao, "LOGOUT")
     db.commit()
