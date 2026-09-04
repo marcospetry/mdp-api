@@ -277,7 +277,7 @@
       const items=await request(path);
       if(isOrigem) state.origensContato=items; else state.tiposInteracao=items;
       const alvo=$(isOrigem?"listaOrigensContato":"listaTiposInteracao");
-      alvo.innerHTML=items.length?`<div class="maintenance-table-wrap"><table class="maintenance-table"><thead><tr><th>Nome</th><th>Código</th><th>Origem</th><th>Status</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td class="maintenance-name">${esc(x.nome)}</td><td><code>${esc(x.codigo)}</code></td><td>${x.padrao_sistema?'Padrão MDP':'Personalizado'}</td><td><span class="admin-tag ${x.ativo?'on':'off'}">${x.ativo?'Ativo':'Inativo'}</span></td><td><div class="admin-item-actions"><button type="button" data-edit-catalogo="${tipo}" data-id="${x.id}">Editar</button><button type="button" data-status-catalogo="${tipo}" data-id="${x.id}" data-ativo="${!x.ativo}">${x.ativo?'Inativar':'Ativar'}</button></div></td></tr>`).join('')}</tbody></table></div>`:`<div class="admin-empty">Nenhum registro.</div>`;
+      alvo.innerHTML=items.length?`<div class="maintenance-table-wrap"><table class="maintenance-table"><thead><tr><th>Nome</th><th>Código</th><th>Descri├º├úo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td class="maintenance-name">${esc(x.nome)}</td><td><code>${esc(x.codigo)}</code></td><td>${esc(x.descricao||'—')}</td><td><span class="admin-tag ${x.ativo?'on':'off'}">${x.ativo?'Ativo':'Inativo'}</span></td><td><div class="admin-item-actions"><button type="button" data-edit-catalogo="${tipo}" data-id="${x.id}">Editar</button><button type="button" data-status-catalogo="${tipo}" data-id="${x.id}" data-ativo="${!x.ativo}">${x.ativo?'Inativar':'Ativar'}</button></div></td></tr>`).join('')}</tbody></table></div>`:`<div class="admin-empty">Nenhum registro.</div>`;
     } catch(e){showMessage(e.message);}
   }
 
@@ -285,7 +285,7 @@
     const items=tipo==="origens"?state.origensContato:state.tiposInteracao;
     const x=id?items.find(v=>v.id===id):null;
     $("catalogoTipo").value=tipo; $("catalogoId").value=x?.id||"";
-    $("tituloCatalogoManutencao").textContent=(x?'Editar ':'Novo ')+(tipo==="origens"?'origem de contato':'tipo de interação');
+    $("tituloCatalogoManutencao").textContent=(x?'Editar ':'Novo ')+(tipo==="origens"?'origem/canal':'tipo de interação');
     $("catalogoCodigo").value=x?.codigo||""; $("catalogoNome").value=x?.nome||"";
     $("catalogoOrdem").value=x?.ordem||""; $("catalogoDescricao").value=x?.descricao||"";
     $("dlgCatalogoManutencao").showModal();
