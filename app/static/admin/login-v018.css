@@ -475,3 +475,21 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #listaOrigensContato .maintenance-table th:nth-child(3),#listaTiposInteracao .maintenance-table th:nth-child(3){width:17%}
 #listaOrigensContato .maintenance-table th:nth-child(4),#listaTiposInteracao .maintenance-table th:nth-child(4){width:12%}
 #listaOrigensContato .maintenance-table th:nth-child(5),#listaTiposInteracao .maintenance-table th:nth-child(5){width:20%}
+
+/* Admin v019 - Cadastros > Empresas > Unidades / Areas */
+.admin-dropdown .admin-dropdown-section {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .65;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.admin-dropdown .admin-dropdown-child {
+  padding-left: 26px;
+}
+.admin-dropdown .admin-dropdown-divider {
+  height: 1px;
+  margin: 6px 10px;
+  background: rgba(127,127,127,.18);
+}

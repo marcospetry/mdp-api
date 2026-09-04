@@ -99,9 +99,12 @@
   }
 
   function showAdminView(name) {
+    state.adminView = name;
     const map = {
       home:"adminHome",
       empresas:"adminEmpresas",
+      unidades:"adminUnidades",
+      areas:"adminAreas",
       contatos:"adminContatos",
       origensContato:"adminOrigensContato",
       tiposInteracao:"adminTiposInteracao",
@@ -114,6 +117,8 @@
     Object.values(map).forEach(id => $(id).classList.add("hidden"));
     $(map[name] || map.home).classList.remove("hidden");
     if (name === "empresas") loadEmpresas();
+    if (name === "unidades") loadOrgAdmin("unidades");
+    if (name === "areas") loadOrgAdmin("areas");
     if (name === "contatos") loadContatos();
     if (name === "origensContato") loadCatalogoManutencao("origens");
     if (name === "tiposInteracao") loadCatalogoManutencao("tipos");
@@ -370,6 +375,8 @@
     $$('[data-edit-area]', $('empresaAreasResumo')).forEach(b => b.onclick=()=>openArea(b.dataset.editArea));
     $$('[data-status-area]', $('empresaAreasResumo')).forEach(b => b.onclick=()=>toggleArea(b.dataset.statusArea, b.dataset.ativo !== 'true'));
     $$('[data-open-contact]', $('empresaContatosResumo')).forEach(b => b.onclick=()=>{ $('dlgEmpresa').close(); openContato(b.dataset.openContact); });
+    if (state.adminView === 'unidades') renderOrgAdminList('unidades');
+    if (state.adminView === 'areas') renderOrgAdminList('areas');
   }
 
   async function openEmpresa(id=null) {
@@ -434,6 +441,63 @@
     catch(e){ showMessage(e.message); }
   }
 
+
+  function orgEmpresaOptions(selected="") {
+    return (state.empresas || [])
+      .filter(e => e.slug !== 'sem-empresa')
+      .map(e => `<option value="${e.id}" ${String(e.id)===String(selected)?'selected':''}>${esc(e.nome)}</option>`)
+      .join('');
+  }
+
+  function renderOrgAdminList(kind) {
+    const isUnidades = kind === 'unidades';
+    const source = $(isUnidades ? 'empresaUnidadesResumo' : 'empresaAreasResumo');
+    const target = $(isUnidades ? 'listaUnidades' : 'listaAreas');
+    if (!source || !target) return;
+
+    target.innerHTML = source.innerHTML;
+
+    if (isUnidades) {
+      $$('[data-edit-unidade]', target).forEach(b => b.onclick=()=>openUnidade(b.dataset.editUnidade));
+      $$('[data-status-unidade]', target).forEach(b => b.onclick=()=>toggleUnidade(b.dataset.statusUnidade, b.dataset.ativo !== 'true'));
+    } else {
+      $$('[data-edit-area]', target).forEach(b => b.onclick=()=>openArea(b.dataset.editArea));
+      $$('[data-status-area]', target).forEach(b => b.onclick=()=>toggleArea(b.dataset.statusArea, b.dataset.ativo !== 'true'));
+    }
+  }
+
+  async function loadOrgAdmin(kind) {
+    try {
+      await ensureEmpresas();
+
+      const isUnidades = kind === 'unidades';
+      const select = $(isUnidades ? 'filtroUnidadeEmpresa' : 'filtroAreaEmpresa');
+      const target = $(isUnidades ? 'listaUnidades' : 'listaAreas');
+      const empresasValidas = (state.empresas || []).filter(e => e.slug !== 'sem-empresa');
+
+      const anterior = select.value;
+      select.innerHTML = `<option value="">Selecione a empresa</option>${orgEmpresaOptions(anterior)}`;
+
+      let empresaId = anterior;
+      if (!empresaId && state.empresaAtual?.id && empresasValidas.some(e => String(e.id)===String(state.empresaAtual.id))) {
+        empresaId = state.empresaAtual.id;
+      }
+      if (!empresaId && empresasValidas.length === 1) empresaId = empresasValidas[0].id;
+
+      if (!empresaId) {
+        target.innerHTML = `<div class="admin-empty">Selecione uma empresa para visualizar ${isUnidades ? 'as unidades' : 'as Ã¡reas'}.</div>`;
+        state.empresaAtual = null;
+        return;
+      }
+
+      select.value = String(empresaId);
+      state.empresaAtual = await request(`/api/admin/empresas/${empresaId}`);
+      await loadEmpresaDossier(empresaId);
+      renderOrgAdminList(kind);
+    } catch (e) {
+      showMessage(e.message);
+    }
+  }
   async function loadContatos() {
     try {
       await ensureEmpresas();
@@ -527,6 +591,16 @@
   $("filtroContatoEmpresa").addEventListener("change", loadContatos);
 
   $$('.company-tab').forEach(b => b.addEventListener('click',()=>setCompanyTab(b.dataset.companyTab)));
+  $('filtroUnidadeEmpresa').addEventListener('change',()=>loadOrgAdmin('unidades'));
+  $('filtroAreaEmpresa').addEventListener('change',()=>loadOrgAdmin('areas'));
+  $('novaUnidadeAdmin').addEventListener('click',()=>{
+    if (!state.empresaAtual?.id) return showMessage('Selecione uma empresa.');
+    openUnidade();
+  });
+  $('novaAreaAdmin').addEventListener('click',()=>{
+    if (!state.empresaAtual?.id) return showMessage('Selecione uma empresa.');
+    openArea();
+  });
   $('novaUnidade').addEventListener('click',()=>openUnidade());
   $('novaArea').addEventListener('click',()=>openArea());
   $('areaEscopo').addEventListener('change',refreshAreaScope);

@@ -110,26 +110,40 @@
             </div>
 
             <nav class="admin-menu">
-              <button type="button" class="admin-menu-button" data-admin-view="home">Início</button>
-              <button type="button" class="admin-menu-button" data-admin-view="empresas">Empresas</button>
-              <button type="button" class="admin-menu-button" data-admin-view="contatos">Contatos</button>
+              <button type="button" class="admin-menu-button" data-admin-view="home">In&iacute;cio</button>
+
               <div class="admin-dropdown-wrap">
-                <button type="button" class="admin-menu-button">Manutenção ▾</button>
+                <button type="button" class="admin-menu-button">Cadastros &#9662;</button>
                 <div class="admin-dropdown">
-                  <button type="button" data-admin-view="origensContato">Origens de Contato</button>
-                  <button type="button" data-admin-view="tiposInteracao">Tipos de Interação</button>
+                  <div class="admin-dropdown-section">Empresas</div>
+                  <button type="button" class="admin-dropdown-child" data-admin-view="empresas">Empresas</button>
+                  <button type="button" class="admin-dropdown-child" data-admin-view="unidades">Unidades</button>
+                  <button type="button" class="admin-dropdown-child" data-admin-view="areas">&Aacute;reas</button>
+                  <div class="admin-dropdown-divider" aria-hidden="true"></div>
+                  <button type="button" data-admin-view="contatos">Contatos</button>
                 </div>
               </div>
-              <div class="admin-menu-separator" aria-hidden="true"></div>
+
               <div class="admin-dropdown-wrap">
-                <button type="button" class="admin-menu-button">Perguntas / Respostas ▾</button>
+                <button type="button" class="admin-menu-button">Manuten&ccedil;&atilde;o &#9662;</button>
+                <div class="admin-dropdown">
+                  <button type="button" data-admin-view="origensContato">Origens de Contato</button>
+                  <button type="button" data-admin-view="tiposInteracao">Tipos de Intera&ccedil;&atilde;o</button>
+                </div>
+              </div>
+
+              <div class="admin-menu-separator" aria-hidden="true"></div>
+
+              <div class="admin-dropdown-wrap">
+                <button type="button" class="admin-menu-button">Perguntas / Respostas &#9662;</button>
                 <div class="admin-dropdown">
                   <button type="button" data-admin-view="categorias">Categorias</button>
                   <button type="button" data-admin-view="perguntas">Perguntas</button>
-                  <button type="button" data-admin-view="formularios">Formulários</button>
+                  <button type="button" data-admin-view="formularios">Formul&aacute;rios</button>
                 </div>
               </div>
             </nav>
+
 
             <div class="admin-session">
               <span class="status-pill">Online</span>
@@ -201,6 +215,37 @@
                 </select>
               </div>
               <div id="listaEmpresas" class="admin-list"></div>
+            </section>
+
+
+            <section id="adminUnidades" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Cadastros &rsaquo; Empresas &rsaquo; Unidades</p>
+                  <h2>Unidades</h2>
+                  <p class="muted">Unidades vinculadas &agrave; empresa selecionada.</p>
+                </div>
+                <button type="button" id="novaUnidadeAdmin" class="admin-primary">+ Nova unidade</button>
+              </div>
+              <div class="admin-toolbar">
+                <select id="filtroUnidadeEmpresa"><option value="">Selecione a empresa</option></select>
+              </div>
+              <div id="listaUnidades" class="admin-list"></div>
+            </section>
+
+            <section id="adminAreas" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Cadastros &rsaquo; Empresas &rsaquo; &Aacute;reas</p>
+                  <h2>&Aacute;reas</h2>
+                  <p class="muted">&Aacute;reas corporativas ou locais da empresa selecionada.</p>
+                </div>
+                <button type="button" id="novaAreaAdmin" class="admin-primary">+ Nova &aacute;rea</button>
+              </div>
+              <div class="admin-toolbar">
+                <select id="filtroAreaEmpresa"><option value="">Selecione a empresa</option></select>
+              </div>
+              <div id="listaAreas" class="admin-list"></div>
             </section>
 
             <section id="adminContatos" class="admin-view hidden">
