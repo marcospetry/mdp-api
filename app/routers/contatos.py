@@ -44,12 +44,15 @@ def criar_contato(
             detail="Empresa técnica 'sem-empresa' não encontrada.",
         )
 
-    origem_site = db.query(OrigemContato).filter(OrigemContato.empresa_id.is_(None), OrigemContato.codigo == "SITE", OrigemContato.ativo.is_(True)).first()
-    tipo_form = db.query(TipoInteracao).filter(TipoInteracao.empresa_id.is_(None), TipoInteracao.codigo == "FORMULARIO_SITE", TipoInteracao.ativo.is_(True)).first()
+    codigo_origem = "OMNI" if dados.canal == "OMNI" else "SITE"
+    codigo_tipo_interacao = "OMNI_AGENDAMENTO" if dados.canal == "OMNI" else "FORMULARIO_SITE"
+
+    origem_obj = db.query(OrigemContato).filter(OrigemContato.empresa_id.is_(None), OrigemContato.codigo == codigo_origem, OrigemContato.ativo.is_(True)).first()
+    tipo_obj = db.query(TipoInteracao).filter(TipoInteracao.empresa_id.is_(None), TipoInteracao.codigo == codigo_tipo_interacao, TipoInteracao.ativo.is_(True)).first()
 
     contato = Contato(
         empresa_id=empresa_inicial.id,
-        origem_contato_id=origem_site.id if origem_site else None,
+        origem_contato_id=origem_obj.id if origem_obj else None,
 
         nome=dados.nome,
         email=str(dados.email),
@@ -57,9 +60,9 @@ def criar_contato(
         empresa_contato=dados.empresa_contato,
         mensagem=dados.mensagem,
 
-        origem="site",
-        origem_primeiro_contato="site",
-        origem_ultimo_contato="site",
+        origem=dados.canal.lower(),
+        origem_primeiro_contato=dados.canal.lower(),
+        origem_ultimo_contato=dados.canal.lower(),
         status="novo",
 
         tipo_solicitacao=dados.tipo_solicitacao,
@@ -85,10 +88,10 @@ def criar_contato(
     interacao = Interacao(
         empresa_id=empresa_inicial.id,
         contato_id=contato.id,
-        canal="SITE",
-        origem="formulario_site",
-        tipo_interacao_id=tipo_form.id if tipo_form else None,
-        tipo_interacao="FORMULARIO_SITE",
+        canal=dados.canal,
+        origem=codigo_tipo_interacao.lower(),
+        tipo_interacao_id=tipo_obj.id if tipo_obj else None,
+        tipo_interacao=codigo_tipo_interacao,
         mensagem=dados.mensagem,
         direcao="ENTRADA",
         classificacao=dados.tipo_solicitacao,

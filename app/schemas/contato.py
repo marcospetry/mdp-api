@@ -17,6 +17,11 @@ class ContatoCreate(BaseModel):
         "DIAGNOSTICO",
     ] = "CONTATO"
 
+    canal: Literal[
+        "SITE",
+        "OMNI",
+    ] = "SITE"
+
     cnpj: str | None = None
     cidade: str | None = None
     uf: str | None = None
