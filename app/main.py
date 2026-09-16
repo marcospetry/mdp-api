@@ -54,6 +54,7 @@ app.include_router(diagnostico_estrutura_router)
 app.include_router(admin_empresas_contatos_router)
 app.include_router(admin_organizacao_router)
 app.include_router(admin_manutencao_router)
+app.include_router(whatsapp_webhook_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
