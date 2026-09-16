@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     smtp_from: str | None = None
     contato_destino: str | None = None
 
+    meta_whatsapp_verify_token: str = "change-me"
+    meta_whatsapp_app_secret: str = "change-me"
+    meta_whatsapp_access_token: str = "change-me"
+    meta_whatsapp_phone_number_id: str = "1230708946787093"
+
     # Desenvolvimento local: bypass explícito de autenticação.
     # Seguro por padrão: só fica efetivo quando APP_ENV=development E DEV_AUTH_BYPASS=true.
     app_env: str = "production"
