@@ -1,3 +1,12 @@
+from app.routers.whatsapp_webhook import router as whatsapp_webhook_router
+from app.routers.admin_manutencao import router as admin_manutencao_router
+from app.routers.admin_organizacao import router as admin_organizacao_router
+from app.routers.admin_empresas_contatos import router as admin_empresas_contatos_router
+from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
+from app.routers.diagnostico_formularios import router as diagnostico_formularios_router
+from app.routers.diagnostico_catalogo import router as diagnostico_catalogo_router
+from app.routers.auth import router as auth_router
+from app.routers.contatos import router as contatos_router
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -5,15 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers.contatos import router as contatos_router
-from app.routers.auth import router as auth_router
-from app.routers.diagnostico_catalogo import router as diagnostico_catalogo_router
-from app.routers.diagnostico_formularios import router as diagnostico_formularios_router
-from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
-from app.routers.admin_empresas_contatos import router as admin_empresas_contatos_router
-from app.routers.admin_organizacao import router as admin_organizacao_router
-from app.routers.admin_manutencao import router as admin_manutencao_router
-from app.routers.whatsapp_webhook import router as whatsapp_webhook_router
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 
 app = FastAPI(
@@ -48,7 +54,6 @@ app.include_router(diagnostico_estrutura_router)
 app.include_router(admin_empresas_contatos_router)
 app.include_router(admin_organizacao_router)
 app.include_router(admin_manutencao_router)
-app.include_router(whatsapp_webhook_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
