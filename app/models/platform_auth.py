@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -61,3 +61,21 @@ class PlatformSessaoUsuario(Base):
     motivo_revogacao = Column(Text, nullable=True)
     ip_origem = Column(String(100), nullable=True)
     user_agent = Column(Text, nullable=True)
+
+class PlatformTenantEndpoint(Base):
+    __tablename__ = "tenant_endpoints"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    tipo = Column(String(50), nullable=False)
+    codigo = Column(String(100), nullable=False)
+    nome = Column(String(150), nullable=False)
+    identificador_publico = Column(String(255), nullable=True)
+    identificador_externo = Column(String(255), nullable=True)
+    url = Column(Text, nullable=True)
+    configuracao = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    ativo = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+

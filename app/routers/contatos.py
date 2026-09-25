@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import get_db, get_platform_db
 from app.models.contato import Contato
 from app.models.empresa import Empresa
 from app.models.interacao import Interacao
 from app.models.manutencao import OrigemContato, TipoInteracao
+from app.models.platform_auth import PlatformTenantEndpoint
 from app.schemas.contato import ContatoCreate, ContatoResponse
 from app.services.email_service import (
     enviar_email_confirmacao_contato,
@@ -19,7 +20,7 @@ router = APIRouter(
     tags=["Contatos"],
 )
 
-SEM_EMPRESA_SLUG = "sem-empresa"
+FORM_CONTATO_ENDPOINT_CODE = "FORM_CONTATO_MDP"
 
 
 @router.post(
@@ -31,17 +32,42 @@ def criar_contato(
     dados: ContatoCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    platform_db: Session = Depends(get_platform_db),
 ):
+    endpoint = (
+        platform_db.query(PlatformTenantEndpoint)
+        .filter(
+            PlatformTenantEndpoint.codigo == FORM_CONTATO_ENDPOINT_CODE,
+            PlatformTenantEndpoint.ativo.is_(True),
+        )
+        .first()
+    )
+    if not endpoint:
+        raise HTTPException(
+            status_code=500,
+            detail="Endpoint público de contato não configurado.",
+        )
+
+    configuracao = endpoint.configuracao or {}
+    empresa_slug = configuracao.get("empresa_slug")
+    if not empresa_slug:
+        raise HTTPException(
+            status_code=500,
+            detail="Empresa destinatária não configurada para o endpoint.",
+        )
+
     empresa_inicial = (
         db.query(Empresa)
-        .filter(Empresa.slug == SEM_EMPRESA_SLUG)
+        .filter(
+            Empresa.slug == empresa_slug,
+            Empresa.ativo.is_(True),
+        )
         .first()
     )
     if not empresa_inicial:
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=500,
-            detail="Empresa técnica 'sem-empresa' não encontrada.",
+            detail="Empresa destinatária do endpoint não encontrada no tenant.",
         )
 
     codigo_origem = "OMNI" if dados.canal == "OMNI" else "SITE"
