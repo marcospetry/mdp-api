@@ -1,8 +1,9 @@
-from sqlalchemy import Boolean, Column, DateTime, String, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.models.tenant import Tenant  # registra tenants no metadata SQLAlchemy
 
 
 class Empresa(Base):
@@ -13,6 +14,8 @@ class Empresa(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
+
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=True)
 
     nome = Column(String(150), nullable=False)
     slug = Column(String(80), nullable=False, unique=True)

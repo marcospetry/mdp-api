@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.models.tenant import Tenant  # registra tenants no metadata SQLAlchemy
 
 
 class Usuario(Base):
@@ -49,6 +50,20 @@ class UsuarioEmpresa(Base):
     acesso_todas_unidades = Column(Boolean, nullable=False, default=False)
     acesso_todas_areas = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    perfil = relationship("Perfil")
+
+
+class UsuarioTenant(Base):
+    __tablename__ = "usuarios_tenants"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    perfil_id = Column(UUID(as_uuid=True), ForeignKey("perfis.id"), nullable=False)
+    ativo = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     perfil = relationship("Perfil")
 
