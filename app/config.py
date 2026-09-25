@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str
+    platform_database_name: str = "mdp_platform"
+    default_tenant_database_name: str = "tenant_mdp"
     secret_key: str = "change-me"
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 15

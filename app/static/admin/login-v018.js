@@ -133,6 +133,7 @@
     $("welcomeName").textContent = `Olá, ${me.nome}`;
     $("companyId").textContent = me.empresa_id || "Acesso global";
     $("profileName").textContent = me.perfil || "Global";
+    $("activeTenantName").textContent = me.tenant_nome || me.tenant_id || "Não identificado";
     $("superadminFlag").textContent = me.is_superadmin ? "Sim" : "Não";
     $("userEmail").textContent = me.email;
     showStep("dashboardStep");

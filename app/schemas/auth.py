@@ -5,7 +5,8 @@ from pydantic import BaseModel, EmailStr, Field
 class LoginRequest(BaseModel):
     email: EmailStr
     senha: str = Field(min_length=1, max_length=512)
-    empresa_id: UUID | None = None
+    empresa_id: UUID | None = None  # legado temporário; seleção operacional ocorre após o Tenant
+    tenant_id: UUID | None = None
 
 
 class LoginResponse(BaseModel):
@@ -46,5 +47,7 @@ class MeResponse(BaseModel):
     email: EmailStr
     is_superadmin: bool
     empresa_id: UUID | None
+    tenant_id: UUID | None = None
+    tenant_nome: str | None = None
     perfil: str | None
     permissoes: list[str]

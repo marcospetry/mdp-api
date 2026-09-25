@@ -9,11 +9,12 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def create_access_token(usuario_id: UUID, sessao_id: UUID, empresa_id: UUID | None) -> str:
+def create_access_token(usuario_id: UUID, sessao_id: UUID, tenant_id: UUID, empresa_id: UUID | None) -> str:
     now = _now()
     payload = {
         "sub": str(usuario_id),
         "sid": str(sessao_id),
+        "tenant_id": str(tenant_id),
         "empresa_id": str(empresa_id) if empresa_id else None,
         "type": "access",
         "iat": now,
@@ -22,11 +23,11 @@ def create_access_token(usuario_id: UUID, sessao_id: UUID, empresa_id: UUID | No
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
-def create_preauth_token(usuario_id: UUID, empresa_id: UUID | None, purpose: str) -> str:
+def create_preauth_token(usuario_id: UUID, tenant_id: UUID, purpose: str) -> str:
     now = _now()
     payload = {
         "sub": str(usuario_id),
-        "empresa_id": str(empresa_id) if empresa_id else None,
+        "tenant_id": str(tenant_id),
         "type": "preauth",
         "purpose": purpose,
         "iat": now,

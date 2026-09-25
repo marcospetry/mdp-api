@@ -1,0 +1,6 @@
+BEGIN;
+INSERT INTO perfis(codigo,nome,descricao,ativo,acesso_total) VALUES ('ADMIN','Administrador','Acesso total às funcionalidades habilitadas para o Tenant',true,true) ON CONFLICT (codigo) DO UPDATE SET nome=EXCLUDED.nome,descricao=EXCLUDED.descricao,ativo=true,acesso_total=true;
+INSERT INTO usuarios_tenant(id,platform_usuario_id,ativo) VALUES ('57c9793d-537d-4f2e-bdde-72c1b345586c','57c9793d-537d-4f2e-bdde-72c1b345586c',true) ON CONFLICT (platform_usuario_id) DO UPDATE SET ativo=true;
+INSERT INTO empresas(id,nome,slug,cnpj,email,telefone,dominio,ativo,status) VALUES ('4ac04902-ee2b-4b18-b99a-b5b3bbefaa40','MDP Consultoria','mdp',NULL,NULL,NULL,'mdpconsultoria.com.br',true,'CLIENTE') ON CONFLICT (id) DO UPDATE SET nome=EXCLUDED.nome,slug=EXCLUDED.slug,dominio=EXCLUDED.dominio,ativo=true,status='CLIENTE';
+INSERT INTO usuarios_empresas(usuario_id,empresa_id,perfil_id,ativo,acesso_todas_unidades,acesso_todas_areas) SELECT ut.id,'4ac04902-ee2b-4b18-b99a-b5b3bbefaa40',p.id,true,true,true FROM usuarios_tenant ut CROSS JOIN perfis p WHERE ut.platform_usuario_id='57c9793d-537d-4f2e-bdde-72c1b345586c' AND p.codigo='ADMIN' ON CONFLICT (usuario_id,empresa_id) DO UPDATE SET perfil_id=EXCLUDED.perfil_id,ativo=true,acesso_todas_unidades=true,acesso_todas_areas=true;
+COMMIT;
