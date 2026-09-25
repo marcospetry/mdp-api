@@ -169,6 +169,23 @@ def require_empresa_access(context: dict, empresa_id: UUID):
         raise HTTPException(status_code=403, detail="Acesso negado à empresa informada.")
 
 
+def require_tenant_access(context: dict, tenant_id: UUID):
+    """Garante acesso somente ao tenant ativo e ao vínculo tenant autenticado.
+
+    Diferente do controle legado por empresa, o superadmin de plataforma não
+    recebe bypass implícito aqui. Operações de tenant exigem vínculo ativo com
+    o tenant, preservando a separação entre papel de plataforma e papel no tenant.
+    """
+    vinculo_tenant = context.get("vinculo_tenant")
+    if (
+        context.get("tenant_id") != tenant_id
+        or not vinculo_tenant
+        or vinculo_tenant.tenant_id != tenant_id
+    ):
+        raise HTTPException(status_code=403, detail="Acesso negado ao tenant informado.")
+    return vinculo_tenant
+
+
 def require_unidade_access(db: Session, context: dict, unidade_id: UUID):
     from app.models.organizacao import UnidadeEmpresa, UsuarioUnidade
 
