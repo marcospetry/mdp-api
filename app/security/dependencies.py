@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models.auth import PerfilPermissao, SessaoUsuario, Usuario, UsuarioEmpresa
+from app.models.auth import PerfilPermissao, SessaoUsuario, Usuario, UsuarioEmpresa, UsuarioTenant
 from app.models.empresa import Empresa
 from app.security.jwt import decode_token
 
@@ -63,11 +63,21 @@ def _dev_context(request: Request, db: Session):
         UsuarioEmpresa.ativo.is_(True),
     ).first()
 
+    vinculo_tenant = None
+    if empresa.tenant_id:
+        vinculo_tenant = db.query(UsuarioTenant).filter(
+            UsuarioTenant.usuario_id == usuario.id,
+            UsuarioTenant.tenant_id == empresa.tenant_id,
+            UsuarioTenant.ativo.is_(True),
+        ).first()
+
     return {
         "usuario": usuario,
         "sessao": None,
         "empresa_id": empresa.id,
         "vinculo": vinculo,
+        "tenant_id": empresa.tenant_id,
+        "vinculo_tenant": vinculo_tenant,
         "dev_auth_bypass": True,
     }
 
@@ -97,6 +107,8 @@ def get_current_context(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessão inválida.")
 
     vinculo = None
+    tenant_id = None
+    vinculo_tenant = None
     if empresa_id:
         vinculo = db.query(UsuarioEmpresa).filter(
             UsuarioEmpresa.usuario_id == usuario_id,
@@ -106,7 +118,24 @@ def get_current_context(
         if not vinculo and not usuario.is_superadmin:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário sem acesso à empresa.")
 
-    return {"usuario": usuario, "sessao": sessao, "empresa_id": empresa_id, "vinculo": vinculo}
+        empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
+        if empresa:
+            tenant_id = empresa.tenant_id
+            if tenant_id:
+                vinculo_tenant = db.query(UsuarioTenant).filter(
+                    UsuarioTenant.usuario_id == usuario_id,
+                    UsuarioTenant.tenant_id == tenant_id,
+                    UsuarioTenant.ativo.is_(True),
+                ).first()
+
+    return {
+        "usuario": usuario,
+        "sessao": sessao,
+        "empresa_id": empresa_id,
+        "vinculo": vinculo,
+        "tenant_id": tenant_id,
+        "vinculo_tenant": vinculo_tenant,
+    }
 
 
 def get_current_user(context=Depends(get_current_context)):
