@@ -30,7 +30,7 @@ button{cursor:pointer}
 .shell{
   min-height:100vh;
   display:grid;
-  grid-template-columns:minmax(360px, .95fr) minmax(420px, 1.05fr);
+  grid-template-columns:1fr;
 }
 
 .brand-panel{
@@ -526,3 +526,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #listaTiposUnidade .maintenance-table .admin-item-actions{gap:5px;flex-wrap:wrap}
 #listaTiposUnidade .maintenance-table .admin-item-actions button{padding-left:8px;padding-right:8px}
 @media(max-width:900px){#listaTiposUnidade .maintenance-table-wrap{overflow-x:auto}#listaTiposUnidade .maintenance-table{min-width:820px}}
+
+/* Destaque de validação local no formulário de contato. */
+.admin-dialog input.field-attention{border-color:#ff7b7b;box-shadow:0 0 0 3px rgba(255,123,123,.16)}

@@ -238,7 +238,7 @@
   $$("[data-close]").forEach(b => b.addEventListener("click", () => $(b.dataset.close).close()));
 
   function statusEmpresaLabel(v) {
-    return ({EM_AVALIACAO:"Em avaliação",CLIENTE:"Cliente",DESCARTADA:"Descartada"})[v] || v || "—";
+    return ({PROSPECCAO:"Em prospecção",EM_AVALIACAO:"Em avaliação",CLIENTE:"Cliente",DESCARTADA:"Descartada"})[v] || v || "—";
   }
 
   function statusContatoLabel(v) {
@@ -266,7 +266,7 @@
     const sel = $("contatoEmpresa");
     if (sel) {
       const atual = sel.value;
-      sel.innerHTML = `<option value="">Sem empresa identificada</option>${empresaOptions({selected:atual})}`;
+      sel.innerHTML = `<option value="">Sem empresa identificada</option>${empresaOptions({includeSemEmpresa:false,selected:atual})}`;
       sel.value = atual;
     }
   }
@@ -334,13 +334,14 @@
     $('dlgTipoOrganizacao').showModal();
   }
 
-  async function carregarOrigensContato(empresaId, selecionada=null){
+  async function carregarOrigensContato(empresaId, selecionada=null, cadastroNovo=false){
     if(!empresaId) return;
     const items=await request(`/api/admin/empresas/${empresaId}/origens-contato`);
     state.origensContato=items;
-    $("contatoOrigem").innerHTML=items.filter(x=>x.ativo || x.id===selecionada).map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join("");
-    const escolha=selecionada || items.find(x=>x.codigo==="ADMIN" && x.ativo)?.id || items.find(x=>x.ativo)?.id;
-    if(escolha) $("contatoOrigem").value=escolha;
+    const semOrigem = !selecionada && !cadastroNovo ? `<option value="">Não informada</option>` : "";
+    $("contatoOrigem").innerHTML=semOrigem + items.filter(x=>x.ativo || x.id===selecionada).map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join("");
+    const escolha=selecionada || (cadastroNovo ? (items.find(x=>x.codigo==="ADMIN" && x.ativo)?.id || items.find(x=>x.ativo)?.id) : "");
+    $("contatoOrigem").value=escolha || "";
   }
 
   async function ensureEmpresas() {
@@ -593,16 +594,17 @@
       $("contatoCnpj").value = c?.cnpj || "";
       $("contatoStatus").value = String(c?.status || "NOVO").toUpperCase();
       $("contatoTipo").value = c?.tipo_solicitacao || "CONTATO";
-      await carregarOrigensContato(c?.empresa_id || empresaManutencaoId(), c?.origem_contato_id || null);
+      await carregarOrigensContato(c?.empresa_id || empresaManutencaoId(), c?.origem_contato_id || null, !c);
       $("contatoSegmento").value = c?.segmento || "";
       $("contatoCidade").value = c?.cidade || "";
       $("contatoUf").value = c?.uf || "";
       $("contatoSiteInstagram").value = c?.site_instagram || "";
       $("contatoMensagem").value = c?.mensagem || "";
       refreshEmpresaSelects();
-      if (c?.empresa_id) $("contatoEmpresa").value = c.empresa_id;
+      const empresaVinculada = state.empresas.find(e => String(e.id) === String(c?.empresa_id || ""));
+      $("contatoEmpresa").value = empresaVinculada?.slug === "sem-empresa" ? "" : (c?.empresa_id || "");
       $("contatoAcoesEmpresa").classList.toggle("hidden", !c);
-      $("criarEmpresaDoContato").disabled = !c || (!c.empresa_contato && !c.cnpj);
+      $("criarEmpresaDoContato").disabled = !c;
       $("dlgContato").showModal();
     } catch(e) { showMessage(e.message); }
   }
@@ -747,18 +749,28 @@
     } catch(e){ showMessage(e.message); }
   });
 
+  $("contatoEmpresaInformada").addEventListener("input", e => {
+    if (e.target.value.trim()) e.target.classList.remove("field-attention");
+  });
+
   $("criarEmpresaDoContato").addEventListener("click", async () => {
     const id=$("contatoId").value;
     if (!id) return;
     const nome=$("contatoEmpresaInformada").value.trim();
-    if (!nome) { showMessage("Informe o nome da empresa no contato antes de criar."); return; }
-    if (!confirm(`Criar a empresa "${nome}" em avaliação e vincular este contato?`)) return;
+    if (!nome) {
+      const campo = $("contatoEmpresaInformada");
+      campo.classList.add("field-attention");
+      alert("Informe o nome da empresa no campo ‘Empresa informada’ antes de criar a empresa.");
+      campo.focus();
+      return;
+    }
+    if (!confirm(`Criar a empresa "${nome}" em prospecção e vincular este contato?`)) return;
     try {
       const c=await request(`/api/admin/contatos/${id}/criar-empresa`, {method:"POST", body:JSON.stringify({
         nome, cnpj:$("contatoCnpj").value.trim()||null,
         email:$("contatoEmail").value.trim()||null,
         telefone:$("contatoTelefone").value.trim()||null,
-        status:"EM_AVALIACAO"
+        status:"PROSPECCAO"
       })});
       state.empresas=[]; await ensureEmpresas(); $("contatoEmpresa").value=c.empresa_id; showMessage(`Empresa criada e contato vinculado a ${c.empresa_nome}.`,"info");
     } catch(e){ showMessage(e.message); }

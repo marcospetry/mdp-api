@@ -203,7 +203,7 @@
                 <div>
                   <p class="kicker">Cadastro › Empresas</p>
                   <h2>Empresas</h2>
-                  <p class="muted">Organizações em avaliação, clientes e empresas descartadas.</p>
+                  <p class="muted">Organizações em prospecção, avaliação, clientes e empresas descartadas.</p>
                 </div>
                 <button type="button" id="novaEmpresa" class="admin-primary">+ Nova empresa</button>
               </div>
@@ -211,6 +211,7 @@
                 <input id="buscaEmpresa" placeholder="Buscar por nome, CNPJ, domínio ou e-mail...">
                 <select id="filtroEmpresaStatus">
                   <option value="">Todos os status</option>
+                  <option value="PROSPECCAO">Em prospecção</option>
                   <option value="EM_AVALIACAO">Em avaliação</option>
                   <option value="CLIENTE">Cliente</option>
                   <option value="DESCARTADA">Descartada</option>
@@ -478,7 +479,7 @@
               </div>
               <div class="admin-form-row">
                 <label>Domínio<input id="empresaDominio" maxlength="255" placeholder="empresa.com.br"></label>
-                <label>Status<select id="empresaStatus"><option value="EM_AVALIACAO">Em avaliação</option><option value="CLIENTE">Cliente</option><option value="DESCARTADA">Descartada</option></select></label>
+                <label>Status<select id="empresaStatus"><option value="PROSPECCAO">Em prospecção</option><option value="EM_AVALIACAO">Em avaliação</option><option value="CLIENTE">Cliente</option><option value="DESCARTADA">Descartada</option></select></label>
               </div>
               <label class="check-label"><input id="empresaAtiva" type="checkbox" checked> Empresa ativa</label>
               <div id="empresaFichaBloco" class="hidden company-dossier">
@@ -609,7 +610,7 @@
               <label>Site / Instagram<input id="contatoSiteInstagram" maxlength="255"></label>
               <label>Mensagem<textarea id="contatoMensagem" rows="3"></textarea></label>
               <div id="contatoAcoesEmpresa" class="contact-company-actions hidden">
-                <div class="admin-note">Se os dados de empresa/CNPJ vieram do formulário, você pode criar a empresa em avaliação e vincular este contato automaticamente.</div>
+                <div class="admin-note">Você pode criar uma empresa em prospecção a partir deste contato e vinculá-la automaticamente.</div>
                 <button type="button" id="criarEmpresaDoContato" class="admin-secondary">Criar empresa a partir deste contato</button>
               </div>
               <div class="dialog-actions">

@@ -117,4 +117,4 @@ class CriarEmpresaDoContatoRequest(BaseModel):
     email: EmailStr | None = None
     telefone: str | None = Field(default=None, max_length=30)
     dominio: str | None = Field(default=None, max_length=255)
-    status: Literal["EM_AVALIACAO", "CLIENTE", "DESCARTADA"] = "EM_AVALIACAO"
+    status: Literal["PROSPECCAO", "EM_AVALIACAO", "CLIENTE", "DESCARTADA"] = "PROSPECCAO"

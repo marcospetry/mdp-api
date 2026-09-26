@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
-EmpresaStatus = Literal["EM_AVALIACAO", "CLIENTE", "DESCARTADA"]
+EmpresaStatus = Literal["PROSPECCAO", "EM_AVALIACAO", "CLIENTE", "DESCARTADA"]
 
 
 class EmpresaCreate(BaseModel):

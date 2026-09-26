@@ -74,11 +74,27 @@ def criar_contato(
     codigo_tipo_interacao = "OMNI_AGENDAMENTO" if dados.canal == "OMNI" else "FORMULARIO_SITE"
 
     origem_obj = db.query(OrigemContato).filter(OrigemContato.codigo == codigo_origem, OrigemContato.ativo.is_(True)).first()
+    if not origem_obj:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Origem de contato {codigo_origem} não configurada no tenant.",
+        )
+
     tipo_obj = db.query(TipoInteracao).filter(TipoInteracao.codigo == codigo_tipo_interacao, TipoInteracao.ativo.is_(True)).first()
+    if not tipo_obj:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Tipo de interação {codigo_tipo_interacao} não configurado no tenant.",
+        )
+
+    # Regra Dual-DB: o endpoint público resolve a organização destinatária
+    # dentro do Tenant. O contato nasce vinculado a essa organização principal.
+    # A empresa declarada pelo visitante permanece em empresa_contato até que
+    # seja cadastrada como organização e o contato seja então revinculado.
 
     contato = Contato(
         empresa_id=empresa_inicial.id,
-        origem_contato_id=origem_obj.id if origem_obj else None,
+        origem_contato_id=origem_obj.id,
 
         nome=dados.nome,
         email=str(dados.email),
@@ -116,7 +132,7 @@ def criar_contato(
         contato_id=contato.id,
         canal=dados.canal,
         origem=codigo_tipo_interacao.lower(),
-        tipo_interacao_id=tipo_obj.id if tipo_obj else None,
+        tipo_interacao_id=tipo_obj.id,
         tipo_interacao=codigo_tipo_interacao,
         mensagem=dados.mensagem,
         direcao="ENTRADA",
