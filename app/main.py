@@ -1,5 +1,6 @@
 from app.routers.whatsapp_webhook import router as whatsapp_webhook_router
 from app.routers.admin_manutencao import router as admin_manutencao_router
+from app.routers.admin_tipos_organizacao import router as admin_tipos_organizacao_router
 from app.routers.admin_organizacao import router as admin_organizacao_router
 from app.routers.admin_empresas_contatos import router as admin_empresas_contatos_router
 from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
@@ -54,6 +55,7 @@ app.include_router(diagnostico_estrutura_router)
 app.include_router(admin_empresas_contatos_router)
 app.include_router(admin_organizacao_router)
 app.include_router(admin_manutencao_router)
+app.include_router(admin_tipos_organizacao_router)
 app.include_router(whatsapp_webhook_router)
 
 

@@ -493,3 +493,36 @@ button:disabled{opacity:.45;cursor:not-allowed}
   margin: 6px 10px;
   background: rgba(127,127,127,.18);
 }
+
+/* Tipos de Organizacao v0.1.1 - tabela compacta sem rolagem horizontal em desktop */
+#listaTiposOrganizacao .maintenance-table-wrap{overflow-x:hidden}
+#listaTiposOrganizacao .maintenance-table{width:100%;min-width:0;table-layout:fixed}
+#listaTiposOrganizacao .maintenance-table th,#listaTiposOrganizacao .maintenance-table td{padding:12px 10px}
+#listaTiposOrganizacao .maintenance-table th:nth-child(1){width:15%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(2){width:16%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(3){width:30%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(4){width:7%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(5){width:8%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(6){width:9%}
+#listaTiposOrganizacao .maintenance-table th:nth-child(7){width:15%}
+#listaTiposOrganizacao .maintenance-table td:nth-child(3){white-space:normal;overflow-wrap:anywhere}
+#listaTiposOrganizacao .maintenance-table .admin-item-actions{gap:5px;flex-wrap:wrap}
+#listaTiposOrganizacao .maintenance-table .admin-item-actions button{padding-left:8px;padding-right:8px}
+@media(max-width:900px){#listaTiposOrganizacao .maintenance-table-wrap{overflow-x:auto}#listaTiposOrganizacao .maintenance-table{min-width:820px}}
+
+
+/* Tipos de Unidade v0.1.2 - tabela compacta sem rolagem horizontal em desktop */
+#listaTiposUnidade .maintenance-table-wrap{overflow-x:hidden}
+#listaTiposUnidade .maintenance-table{width:100%;min-width:0;table-layout:fixed}
+#listaTiposUnidade .maintenance-table th,#listaTiposUnidade .maintenance-table td{padding:12px 9px}
+#listaTiposUnidade .maintenance-table th:nth-child(1){width:15%}
+#listaTiposUnidade .maintenance-table th:nth-child(2){width:17%}
+#listaTiposUnidade .maintenance-table th:nth-child(3){width:27%}
+#listaTiposUnidade .maintenance-table th:nth-child(4){width:7%}
+#listaTiposUnidade .maintenance-table th:nth-child(5){width:8%}
+#listaTiposUnidade .maintenance-table th:nth-child(6){width:9%}
+#listaTiposUnidade .maintenance-table th:nth-child(7){width:17%}
+#listaTiposUnidade .maintenance-table td:nth-child(3){white-space:normal;overflow-wrap:anywhere}
+#listaTiposUnidade .maintenance-table .admin-item-actions{gap:5px;flex-wrap:wrap}
+#listaTiposUnidade .maintenance-table .admin-item-actions button{padding-left:8px;padding-right:8px}
+@media(max-width:900px){#listaTiposUnidade .maintenance-table-wrap{overflow-x:auto}#listaTiposUnidade .maintenance-table{min-width:820px}}

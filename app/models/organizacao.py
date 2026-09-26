@@ -10,7 +10,6 @@ class TipoUnidade(Base):
     __tablename__ = "tipos_unidade"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    empresa_id = Column(UUID(as_uuid=True), ForeignKey("empresas.id", ondelete="CASCADE"), nullable=True)
     codigo = Column(String(50), nullable=False)
     nome = Column(String(120), nullable=False)
     descricao = Column(Text, nullable=True)

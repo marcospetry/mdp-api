@@ -28,7 +28,6 @@ class TipoUnidadeUpdate(BaseModel):
 
 class TipoUnidadeResponse(BaseModel):
     id: UUID
-    empresa_id: UUID | None
     codigo: str
     nome: str
     descricao: str | None

@@ -54,12 +54,10 @@ def _empresa(db, empresa_id):
     return obj
 
 
-def _tipo_valido(db, empresa_id, tipo_id):
+def _tipo_valido(db, tipo_id):
     tipo = db.query(TipoUnidade).filter(TipoUnidade.id == tipo_id).first()
     if not tipo:
         raise HTTPException(404, "Tipo de unidade não encontrado.")
-    if tipo.empresa_id is not None and tipo.empresa_id != empresa_id:
-        raise HTTPException(409, "Tipo de unidade pertence a outra empresa.")
     if not tipo.ativo:
         raise HTTPException(409, "Tipo de unidade está inativo.")
     return tipo
@@ -86,7 +84,7 @@ def _area_da_empresa(db, empresa_id, area_id):
 @router.get("/empresas/{empresa_id}/tipos-unidade", response_model=list[TipoUnidadeResponse])
 def listar_tipos(empresa_id: UUID, ativo: bool | None = None, db: Session = Depends(get_db), context=Depends(get_current_context)):
     _empresa(db, empresa_id); require_empresa_access(context, empresa_id)
-    q = db.query(TipoUnidade).filter((TipoUnidade.empresa_id.is_(None)) | (TipoUnidade.empresa_id == empresa_id))
+    q = db.query(TipoUnidade)
     if ativo is not None: q = q.filter(TipoUnidade.ativo == ativo)
     return q.order_by(TipoUnidade.ordem, TipoUnidade.nome).all()
 
@@ -94,17 +92,22 @@ def listar_tipos(empresa_id: UUID, ativo: bool | None = None, db: Session = Depe
 @router.post("/empresas/{empresa_id}/tipos-unidade", response_model=TipoUnidadeResponse, status_code=201)
 def criar_tipo(empresa_id: UUID, dados: TipoUnidadeCreate, db: Session = Depends(get_db), context=Depends(get_current_context)):
     _empresa(db, empresa_id); require_empresa_access(context, empresa_id)
-    obj = TipoUnidade(empresa_id=empresa_id, padrao_sistema=False, **dados.model_dump())
-    db.add(obj); _commit(db, "Já existe tipo de unidade com este código nesta empresa."); db.refresh(obj); return obj
+    obj = TipoUnidade(padrao_sistema=False, **dados.model_dump())
+    db.add(obj); _commit(db, "Já existe tipo de unidade com este código neste Tenant."); db.refresh(obj); return obj
 
 
 @router.put("/tipos-unidade/{tipo_id}", response_model=TipoUnidadeResponse)
 def atualizar_tipo(tipo_id: UUID, dados: TipoUnidadeUpdate, db: Session = Depends(get_db), context=Depends(get_current_context)):
     obj = db.query(TipoUnidade).filter(TipoUnidade.id == tipo_id).first()
     if not obj: raise HTTPException(404, "Tipo de unidade não encontrado.")
-    if obj.padrao_sistema: raise HTTPException(409, "Tipo padrão MDP é protegido.")
-    require_empresa_access(context, obj.empresa_id)
-    for k,v in dados.model_dump(exclude_unset=True).items(): setattr(obj,k,v)
+    if not context["usuario"].is_superadmin:
+        empresa_id = context.get("empresa_id")
+        if not empresa_id: raise HTTPException(403, "Empresa ativa não definida.")
+        require_empresa_access(context, empresa_id)
+    alteracoes = dados.model_dump(exclude_unset=True)
+    if "codigo" in alteracoes and alteracoes["codigo"] != obj.codigo:
+        raise HTTPException(409, "O código interno do tipo de unidade não pode ser alterado.")
+    for k,v in alteracoes.items(): setattr(obj,k,v)
     _commit(db); db.refresh(obj); return obj
 
 
@@ -113,8 +116,10 @@ def status_tipo(tipo_id: UUID, dados: StatusUpdate, db: Session = Depends(get_db
     obj = db.query(TipoUnidade).filter(TipoUnidade.id == tipo_id).first()
     if not obj: raise HTTPException(404, "Tipo de unidade não encontrado.")
     if obj.padrao_sistema and not context["usuario"].is_superadmin: raise HTTPException(409, "Tipo padrão MDP é protegido.")
-    if obj.empresa_id: require_empresa_access(context, obj.empresa_id)
-    elif not context["usuario"].is_superadmin: raise HTTPException(403, "Somente MDP pode alterar tipo global.")
+    if not context["usuario"].is_superadmin:
+        empresa_id = context.get("empresa_id")
+        if not empresa_id: raise HTTPException(403, "Empresa ativa não definida.")
+        require_empresa_access(context, empresa_id)
     obj.ativo=dados.ativo; db.commit(); db.refresh(obj); return obj
 
 
@@ -130,7 +135,7 @@ def listar_unidades(empresa_id: UUID, ativo: bool | None=None, db: Session=Depen
 
 @router.post("/empresas/{empresa_id}/unidades", response_model=UnidadeResponse, status_code=201)
 def criar_unidade(empresa_id: UUID, dados: UnidadeCreate, db: Session=Depends(get_db), context=Depends(get_current_context)):
-    _empresa(db, empresa_id); require_empresa_access(context, empresa_id); _tipo_valido(db, empresa_id, dados.tipo_unidade_id)
+    _empresa(db, empresa_id); require_empresa_access(context, empresa_id); _tipo_valido(db, dados.tipo_unidade_id)
     obj=UnidadeEmpresa(empresa_id=empresa_id, **dados.model_dump()); db.add(obj); _commit(db, "Código ou CNPJ de unidade já utilizado."); db.refresh(obj); return obj
 
 
@@ -150,7 +155,7 @@ def atualizar_unidade(unidade_id: UUID, dados: UnidadeUpdate, db: Session=Depend
     if not obj: raise HTTPException(404,"Unidade não encontrada.")
     obj = require_unidade_access(db, context, unidade_id)
     changes=dados.model_dump(exclude_unset=True)
-    if "tipo_unidade_id" in changes: _tipo_valido(db,obj.empresa_id,changes["tipo_unidade_id"])
+    if "tipo_unidade_id" in changes: _tipo_valido(db,changes["tipo_unidade_id"])
     for k,v in changes.items(): setattr(obj,k,v)
     _commit(db,"Código ou CNPJ de unidade já utilizado."); db.refresh(obj); return obj
 

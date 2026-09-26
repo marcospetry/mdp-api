@@ -109,8 +109,8 @@ def _contato_response(db: Session, contato: Contato) -> ContatoAdminResponse:
 def _validar_origem(db: Session, origem_id: UUID | None, empresa_id: UUID):
     if origem_id is None: return None
     origem=db.query(OrigemContato).filter(OrigemContato.id==origem_id, OrigemContato.ativo.is_(True)).first()
-    if not origem or (origem.empresa_id is not None and origem.empresa_id != empresa_id):
-        raise HTTPException(400, "Origem de contato inválida para esta empresa.")
+    if not origem:
+        raise HTTPException(400, "Origem de contato inválida ou inativa.")
     return origem
 
 
@@ -164,6 +164,9 @@ def criar_empresa(dados: EmpresaCreate, db: Session = Depends(get_db), context=D
     if duplicada_cnpj:
         raise HTTPException(status_code=409, detail=f"Já existe empresa com este CNPJ: {duplicada_cnpj.nome}.")
 
+    if dados.organizacao_principal and not context["usuario"].is_superadmin:
+        raise HTTPException(status_code=403, detail="Somente SUPERADMIN pode definir a organização principal do Tenant.")
+
     payload = dados.model_dump()
     payload["slug"] = _slug_unico(db, dados.nome, dados.slug)
     empresa = Empresa(**payload)
@@ -194,6 +197,9 @@ def atualizar_empresa(empresa_id: UUID, dados: EmpresaUpdate, db: Session = Depe
     empresa = _empresa_ou_404(db, empresa_id)
     alteracoes = dados.model_dump(exclude_unset=True)
 
+    if "organizacao_principal" in alteracoes and not context["usuario"].is_superadmin:
+        raise HTTPException(status_code=403, detail="Somente SUPERADMIN pode alterar a organização principal do Tenant.")
+
     if "cnpj" in alteracoes:
         duplicada = _empresa_por_cnpj(db, alteracoes.get("cnpj"), ignorar_id=empresa.id)
         if duplicada:
@@ -218,6 +224,8 @@ def atualizar_empresa(empresa_id: UUID, dados: EmpresaUpdate, db: Session = Depe
 def inativar_empresa(empresa_id: UUID, db: Session = Depends(get_db), context=Depends(get_current_context)):
     require_empresa_access(context, empresa_id)
     empresa = _empresa_ou_404(db, empresa_id)
+    if empresa.organizacao_principal:
+        raise HTTPException(status_code=409, detail="A organização principal do Tenant não pode ser inativada.")
     if empresa.slug == SEM_EMPRESA_SLUG:
         raise HTTPException(status_code=409, detail="A empresa técnica 'sem-empresa' não pode ser inativada.")
     empresa.ativo = False

@@ -7,7 +7,6 @@ from app.database import Base
 class OrigemContato(Base):
     __tablename__ = "origens_contato"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    empresa_id = Column(UUID(as_uuid=True), ForeignKey("empresas.id", ondelete="CASCADE"), nullable=True)
     codigo = Column(String(50), nullable=False)
     nome = Column(String(120), nullable=False)
     descricao = Column(Text, nullable=True)
@@ -20,7 +19,6 @@ class OrigemContato(Base):
 class TipoInteracao(Base):
     __tablename__ = "tipos_interacao"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    empresa_id = Column(UUID(as_uuid=True), ForeignKey("empresas.id", ondelete="CASCADE"), nullable=True)
     codigo = Column(String(50), nullable=False)
     nome = Column(String(120), nullable=False)
     descricao = Column(Text, nullable=True)

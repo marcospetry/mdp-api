@@ -17,6 +17,7 @@ class EmpresaCreate(BaseModel):
     dominio: str | None = Field(default=None, max_length=255)
     status: EmpresaStatus = "EM_AVALIACAO"
     ativo: bool = True
+    organizacao_principal: bool = False
 
     @field_validator("nome")
     @classmethod
@@ -41,6 +42,7 @@ class EmpresaUpdate(BaseModel):
     dominio: str | None = Field(default=None, max_length=255)
     status: EmpresaStatus | None = None
     ativo: bool | None = None
+    organizacao_principal: bool | None = None
 
     @field_validator("nome")
     @classmethod
@@ -68,6 +70,7 @@ class EmpresaResponse(BaseModel):
     dominio: str | None
     status: str
     ativo: bool
+    organizacao_principal: bool
     created_at: datetime
     updated_at: datetime
 

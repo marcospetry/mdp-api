@@ -20,6 +20,7 @@ class Empresa(Base):
     telefone = Column(String(30), nullable=True)
     dominio = Column(String(255), nullable=True)
     status = Column(String(30), nullable=False, default="EM_AVALIACAO")
+    organizacao_principal = Column(Boolean, nullable=False, default=False)
 
     ativo = Column(
         Boolean,

@@ -1,6 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -12,25 +12,26 @@ router = APIRouter(prefix="/api/admin", tags=["Admin - Manutenção"], dependenc
 
 def _listar(db, model, empresa_id, context):
     require_empresa_access(context, empresa_id)
-    return db.query(model).filter(or_(model.empresa_id.is_(None), model.empresa_id == empresa_id)).order_by(model.ordem, model.nome).all()
+    return db.query(model).order_by(model.ordem, model.nome).all()
 
 def _criar(db, model, empresa_id, dados, context):
     require_empresa_access(context, empresa_id)
-    ordem = dados.ordem or ((db.query(func.max(model.ordem)).filter(model.empresa_id == empresa_id).scalar() or 0) + 1)
-    obj = model(empresa_id=empresa_id, codigo=dados.codigo.strip().upper(), nome=dados.nome.strip(), descricao=dados.descricao, ordem=ordem, padrao_sistema=False)
+    ordem = dados.ordem or ((db.query(func.max(model.ordem)).scalar() or 0) + 1)
+    obj = model(codigo=dados.codigo.strip().upper(), nome=dados.nome.strip(), descricao=dados.descricao, ordem=ordem, padrao_sistema=False)
     db.add(obj)
     try: db.commit()
     except IntegrityError:
-        db.rollback(); raise HTTPException(409, "Código já cadastrado neste escopo.")
+        db.rollback(); raise HTTPException(409, "Código já cadastrado neste Tenant.")
     db.refresh(obj); return obj
 
 def _proprio(db, model, obj_id, context):
     obj=db.query(model).filter(model.id==obj_id).first()
     if not obj: raise HTTPException(404, "Registro não encontrado.")
-    if obj.empresa_id is None:
-        if not (context["usuario"].is_superadmin or context.get("dev_auth_bypass")):
-            raise HTTPException(403, "Padrão global MDP protegido.")
-    else: require_empresa_access(context, obj.empresa_id)
+    if not context["usuario"].is_superadmin and not context.get("dev_auth_bypass"):
+        empresa_id = context.get("empresa_id")
+        if not empresa_id:
+            raise HTTPException(403, "Empresa ativa não definida.")
+        require_empresa_access(context, empresa_id)
     return obj
 
 def _editar(db, model, obj_id, dados, context):
@@ -41,7 +42,7 @@ def _editar(db, model, obj_id, dados, context):
     for k,v in vals.items(): setattr(obj,k,v)
     try: db.commit()
     except IntegrityError:
-        db.rollback(); raise HTTPException(409,"Código já cadastrado neste escopo.")
+        db.rollback(); raise HTTPException(409,"Código já cadastrado neste Tenant.")
     db.refresh(obj); return obj
 
 def _status(db, model, obj_id, dados, context):

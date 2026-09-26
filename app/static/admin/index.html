@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MDP Consultoria | Acesso</title>
-  <link rel="stylesheet" href="/admin-assets/login-v018.css?v=tenant-header-1">
+  <link rel="stylesheet" href="/admin-assets/login-v018.css?v=tipos-unidade-2">
 </head>
 <body>
   <main class="shell">
@@ -129,6 +129,8 @@
                 <div class="admin-dropdown">
                   <button type="button" data-admin-view="origensContato">Origens/Canais</button>
                   <button type="button" data-admin-view="tiposInteracao">Tipos de Intera&ccedil;&atilde;o</button>
+                  <button type="button" data-admin-view="tiposOrganizacao">Tipos de Organiza&ccedil;&atilde;o</button>
+                  <button type="button" data-admin-view="tiposUnidade">Tipos de Unidade</button>
                 </div>
               </div>
 
@@ -284,6 +286,16 @@
             <section id="adminTiposInteracao" class="admin-view hidden">
               <div class="admin-page-head"><div><p class="kicker">Manutenção</p><h2>Tipos de Interação</h2><p class="muted">Tipos disponíveis para classificar interações.</p></div><button type="button" id="novoTipoInteracao" class="admin-primary">+ Novo tipo</button></div>
               <div id="listaTiposInteracao" class="admin-list"></div>
+            </section>
+
+            <section id="adminTiposOrganizacao" class="admin-view hidden">
+              <div class="admin-page-head"><div><p class="kicker">Manuten&ccedil;&atilde;o</p><h2>Tipos de Organiza&ccedil;&atilde;o</h2><p class="muted">Pap&eacute;is de relacionamento que uma organiza&ccedil;&atilde;o pode acumular, como Cliente e Fornecedor.</p></div><button type="button" id="novoTipoOrganizacao" class="admin-primary">+ Novo tipo</button></div>
+              <div id="listaTiposOrganizacao" class="admin-list"></div>
+            </section>
+
+            <section id="adminTiposUnidade" class="admin-view hidden">
+              <div class="admin-page-head"><div><p class="kicker">Manuten&ccedil;&atilde;o</p><h2>Tipos de Unidade</h2><p class="muted">Tipos dispon&iacute;veis para classificar as unidades das organiza&ccedil;&otilde;es.</p></div><button type="button" id="novoTipoUnidade" class="admin-primary">+ Novo tipo</button></div>
+              <div id="listaTiposUnidade" class="admin-list"></div>
             </section>
 
             <section id="adminCategorias" class="admin-view hidden">
@@ -475,6 +487,7 @@
                   <button type="button" class="company-tab" data-company-tab="unidades">Unidades</button>
                   <button type="button" class="company-tab" data-company-tab="areas">Áreas</button>
                   <button type="button" class="company-tab" data-company-tab="contatos">Contatos</button>
+                  <button type="button" class="company-tab" data-company-tab="tipos">Tipos</button>
                 </div>
                 <section class="company-tab-panel" data-company-panel="geral">
                   <div id="empresaResumoEstrutura" class="company-summary-grid"></div>
@@ -490,6 +503,11 @@
                 <section class="company-tab-panel hidden" data-company-panel="contatos">
                   <div class="company-panel-head"><div><strong>Contatos vinculados</strong><span>Pessoas relacionadas a esta empresa.</span></div></div>
                   <div id="empresaContatosResumo" class="admin-linked-list"></div>
+                </section>
+                <section class="company-tab-panel hidden" data-company-panel="tipos">
+                  <div class="company-panel-head"><div><strong>Tipos da Organiza&ccedil;&atilde;o</strong><span>Relacionamentos atribu&iacute;dos a esta organiza&ccedil;&atilde;o.</span></div><button type="button" id="novoTipoEmpresa" class="admin-secondary">+ Novo tipo de organiza&ccedil;&atilde;o</button></div>
+                  <div id="empresaPrincipalAviso" class="admin-empty compact-empty hidden"><strong>Tenant / Organiza&ccedil;&atilde;o Principal</strong><br>Esta organiza&ccedil;&atilde;o representa o pr&oacute;prio Tenant. Tipos de relacionamento comercial n&atilde;o se aplicam.</div>
+                  <div id="empresaTiposSelecao" class="admin-linked-list"></div>
                 </section>
               </div>
               <div class="dialog-actions">
@@ -524,6 +542,26 @@
               <div class="admin-form-row"><label>Ordem *<input id="areaOrdem" type="number" min="1" required></label><label class="check-label"><input id="areaAtiva" type="checkbox" checked> Área ativa</label></div>
               <label>Descrição<textarea id="areaDescricao" rows="3"></textarea></label>
               <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgArea">Cancelar</button><button type="submit" class="admin-primary">Salvar área</button></div>
+            </form>
+          </dialog>
+
+
+          <dialog id="dlgAdicionarTipoEmpresa" class="admin-dialog">
+            <form id="formAdicionarTipoEmpresa">
+              <div class="dialog-head"><div><h3>Adicionar tipo de organiza&ccedil;&atilde;o</h3><p>Selecione um tipo ativo ainda n&atilde;o relacionado.</p></div><button type="button" class="dialog-close" data-close="dlgAdicionarTipoEmpresa">×</button></div>
+              <label>Tipo de Organiza&ccedil;&atilde;o *<select id="novoTipoEmpresaSelect" required></select></label>
+              <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgAdicionarTipoEmpresa">Cancelar</button><button type="submit" class="admin-primary">Adicionar</button></div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgTipoOrganizacao" class="admin-dialog">
+            <form id="formTipoOrganizacao">
+              <div class="dialog-head"><div><h3 id="tituloTipoOrganizacao">Novo tipo de organiza&ccedil;&atilde;o</h3></div><button type="button" class="dialog-close" data-close="dlgTipoOrganizacao">×</button></div>
+              <input type="hidden" id="tipoOrganizacaoId">
+              <div class="admin-form-row"><label>C&oacute;digo interno *<input id="tipoOrganizacaoCodigo" maxlength="50" required></label><label>Nome *<input id="tipoOrganizacaoNome" maxlength="120" required></label></div>
+              <div class="admin-form-row"><label>Ordem<input id="tipoOrganizacaoOrdem" type="number" min="1"></label><label class="check-label"><input id="tipoOrganizacaoAtivo" type="checkbox" checked> Ativo</label></div>
+              <label>Descri&ccedil;&atilde;o<textarea id="tipoOrganizacaoDescricao" rows="3"></textarea></label>
+              <div class="dialog-actions"><button type="button" class="admin-secondary" data-close="dlgTipoOrganizacao">Cancelar</button><button type="submit" class="admin-primary">Salvar</button></div>
             </form>
           </dialog>
 
@@ -888,6 +926,6 @@
     </section>
   </main>
 
-  <script src="/admin-assets/login-v018.js?v=tenant-header-1"></script>
+  <script src="/admin-assets/login-v018.js?v=tipos-unidade-2"></script>
 </body>
 </html>

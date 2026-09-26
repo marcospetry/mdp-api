@@ -8,6 +8,9 @@
     contatos: [],
     origensContato: [],
     tiposInteracao: [],
+    tiposOrganizacao: [],
+    tiposUnidade: [],
+    empresaTiposOrganizacao: [],
     empresaAtual: null,
     empresaUnidades: [],
     empresaAreas: [],
@@ -108,6 +111,8 @@
       contatos:"adminContatos",
       origensContato:"adminOrigensContato",
       tiposInteracao:"adminTiposInteracao",
+      tiposOrganizacao:"adminTiposOrganizacao",
+      tiposUnidade:"adminTiposUnidade",
       categorias:"adminCategorias",
       perguntas:"adminPerguntas",
       formularios:"adminFormularios",
@@ -122,6 +127,8 @@
     if (name === "contatos") loadContatos();
     if (name === "origensContato") loadCatalogoManutencao("origens");
     if (name === "tiposInteracao") loadCatalogoManutencao("tipos");
+    if (name === "tiposOrganizacao") loadTiposOrganizacao();
+    if (name === "tiposUnidade") loadTiposUnidade();
     if (name === "categorias") loadCategorias();
     if (name === "perguntas") loadPerguntas();
     if (name === "formularios") loadFormularios();
@@ -287,9 +294,44 @@
     const x=id?items.find(v=>v.id===id):null;
     $("catalogoTipo").value=tipo; $("catalogoId").value=x?.id||"";
     $("tituloCatalogoManutencao").textContent=(x?'Editar ':'Novo ')+(tipo==="origens"?'origem/canal':'tipo de interação');
-    $("catalogoCodigo").value=x?.codigo||""; $("catalogoNome").value=x?.nome||"";
+    $("catalogoCodigo").value=x?.codigo||""; $("catalogoCodigo").disabled=false; $("catalogoNome").value=x?.nome||"";
     $("catalogoOrdem").value=x?.ordem||""; $("catalogoDescricao").value=x?.descricao||"";
     $("dlgCatalogoManutencao").showModal();
+  }
+
+  async function loadTiposUnidade() {
+    try {
+      await ensureEmpresas();
+      const empresaId=empresaManutencaoId();
+      if(!empresaId) throw new Error("Empresa ativa não definida.");
+      const items=await request(`/api/admin/empresas/${empresaId}/tipos-unidade`);
+      state.tiposUnidade=items;
+      $("listaTiposUnidade").innerHTML=items.length?`<div class="maintenance-table-wrap"><table class="maintenance-table"><thead><tr><th>Nome</th><th>Código interno</th><th>Descrição</th><th>Ordem</th><th>Padrão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td class="maintenance-name">${esc(x.nome)}</td><td><code>${esc(x.codigo)}</code></td><td>${esc(x.descricao||'—')}</td><td>${x.ordem??'—'}</td><td>${x.padrao_sistema?'Sim':'Não'}</td><td><span class="admin-tag ${x.ativo?'on':'off'}">${x.ativo?'Ativo':'Inativo'}</span></td><td><div class="admin-item-actions"><button type="button" data-edit-tipo-unidade="${x.id}">Editar</button><button type="button" data-status-tipo-unidade="${x.id}" data-ativo="${!x.ativo}">${x.ativo?'Inativar':'Ativar'}</button></div></td></tr>`).join('')}</tbody></table></div>`:`<div class="admin-empty">Nenhum tipo de unidade.</div>`;
+    } catch(e){showMessage(e.message);}
+  }
+
+  function openTipoUnidade(id=null){
+    const x=id?state.tiposUnidade.find(v=>v.id===id):null;
+    $("catalogoTipo").value="unidades"; $("catalogoId").value=x?.id||"";
+    $("tituloCatalogoManutencao").textContent=x?'Editar tipo de unidade':'Novo tipo de unidade';
+    $("catalogoCodigo").value=x?.codigo||""; $("catalogoCodigo").disabled=!!x; $("catalogoNome").value=x?.nome||"";
+    $("catalogoOrdem").value=x?.ordem||""; $("catalogoDescricao").value=x?.descricao||"";
+    $("dlgCatalogoManutencao").showModal();
+  }
+
+  async function loadTiposOrganizacao() {
+    try {
+      const items = await request('/api/admin/tipos-organizacao');
+      state.tiposOrganizacao = items;
+      $('listaTiposOrganizacao').innerHTML = items.length ? `<div class="maintenance-table-wrap"><table class="maintenance-table"><thead><tr><th>Nome</th><th>Código interno</th><th>Descrição</th><th>Ordem</th><th>Padrão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td class="maintenance-name">${esc(x.nome)}</td><td><code>${esc(x.codigo)}</code></td><td>${esc(x.descricao||'—')}</td><td>${x.ordem}</td><td>${x.padrao_sistema?'Sim':'Não'}</td><td><span class="admin-tag ${x.ativo?'on':'off'}">${x.ativo?'Ativo':'Inativo'}</span></td><td><div class="admin-item-actions"><button type="button" data-edit-tipo-organizacao="${x.id}">Editar</button><button type="button" data-status-tipo-organizacao="${x.id}" data-ativo="${!x.ativo}">${x.ativo?'Inativar':'Ativar'}</button></div></td></tr>`).join('')}</tbody></table></div>` : `<div class="admin-empty">Nenhum tipo de organização.</div>`;
+    } catch(e) { showMessage(e.message); }
+  }
+
+  function openTipoOrganizacao(id=null) {
+    const x=id ? state.tiposOrganizacao.find(v=>v.id===id) : null;
+    $('tipoOrganizacaoId').value=x?.id||''; $('tituloTipoOrganizacao').textContent=x?'Editar tipo de organização':'Novo tipo de organização';
+    $('tipoOrganizacaoCodigo').value=x?.codigo||''; $('tipoOrganizacaoNome').value=x?.nome||''; $('tipoOrganizacaoDescricao').value=x?.descricao||''; $('tipoOrganizacaoOrdem').value=x?.ordem||''; $('tipoOrganizacaoAtivo').checked=x?.ativo??true;
+    $('dlgTipoOrganizacao').showModal();
   }
 
   async function carregarOrigensContato(empresaId, selecionada=null){
@@ -327,6 +369,7 @@
           <div class="admin-tags">
             <span class="admin-tag ${e.status==="CLIENTE"?"on":e.status==="DESCARTADA"?"off":"eval"}">${esc(statusEmpresaLabel(e.status))}</span>
             <span class="admin-tag ${e.ativo?"on":"off"}">${e.ativo?"Ativa":"Inativa"}</span>
+            ${e.organizacao_principal?`<span class="admin-tag on">Tenant / Principal</span>`:""}
             ${e.slug==="sem-empresa"?`<span class="admin-tag">Técnica</span>`:""}
           </div>
         </div>
@@ -353,15 +396,24 @@
   }
 
   async function loadEmpresaDossier(id) {
-    const [contatos, tipos, unidades, areas] = await Promise.all([
+    const [contatos, tipos, unidades, areas, tiposOrganizacao, tiposEmpresa] = await Promise.all([
       request(`/api/admin/empresas/${id}/contatos`),
       request(`/api/admin/empresas/${id}/tipos-unidade`),
       request(`/api/admin/empresas/${id}/unidades`),
       request(`/api/admin/empresas/${id}/areas`),
+      request(`/api/admin/tipos-organizacao`),
+      request(`/api/admin/empresas/${id}/tipos-organizacao`),
     ]);
     state.empresaTiposUnidade = tipos;
     state.empresaUnidades = unidades;
     state.empresaAreas = areas;
+    state.tiposOrganizacao = tiposOrganizacao;
+    state.empresaTiposOrganizacao = tiposEmpresa;
+    const principal = !!state.empresaAtual?.organizacao_principal;
+    $('empresaPrincipalAviso').classList.toggle('hidden', !principal);
+    $('empresaTiposSelecao').classList.toggle('hidden', principal);
+    $('novoTipoEmpresa').classList.toggle('hidden', principal);
+    $('empresaTiposSelecao').innerHTML = principal ? '' : tiposEmpresa.map(t => `<div class="org-row"><span class="org-row-main"><strong>${esc(t.nome)}</strong><span>${esc(t.codigo)}${t.descricao ? ` • ${esc(t.descricao)}` : ''}${t.ativo ? '' : ' • Inativo'}</span></span><div class="org-row-actions"><button type="button" class="danger" data-remover-tipo-empresa="${t.id}">Remover</button></div></div>`).join('') || `<div class="admin-empty compact-empty">Nenhum tipo de organização relacionado.</div>`;
     $('empresaResumoEstrutura').innerHTML = `
       <div class="company-summary-card"><strong>${unidades.length}</strong><span>Unidades</span></div>
       <div class="company-summary-card"><strong>${areas.length}</strong><span>Áreas</span></div>
@@ -575,12 +627,52 @@
 
   $("novaOrigemContato").addEventListener("click",()=>openCatalogoManutencao("origens"));
   $("novoTipoInteracao").addEventListener("click",()=>openCatalogoManutencao("tipos"));
+  $("novoTipoOrganizacao").addEventListener("click",()=>openTipoOrganizacao());
+  $("novoTipoUnidade").addEventListener("click",()=>openTipoUnidade());
+  $("listaTiposOrganizacao").addEventListener("click",async ev=>{
+    const edit=ev.target.closest('[data-edit-tipo-organizacao]'); if(edit){openTipoOrganizacao(edit.dataset.editTipoOrganizacao);return;}
+    const st=ev.target.closest('[data-status-tipo-organizacao]'); if(st){try{await request(`/api/admin/tipos-organizacao/${st.dataset.statusTipoOrganizacao}`,{method:'PUT',body:JSON.stringify({ativo:st.dataset.ativo==='true'})});await loadTiposOrganizacao();showMessage('Status atualizado.','info');}catch(e){showMessage(e.message);}}
+  });
+  $("formTipoOrganizacao").addEventListener("submit",async ev=>{ev.preventDefault();try{const id=$('tipoOrganizacaoId').value;const payload={codigo:$('tipoOrganizacaoCodigo').value.trim(),nome:$('tipoOrganizacaoNome').value.trim(),descricao:$('tipoOrganizacaoDescricao').value.trim()||null,ordem:$('tipoOrganizacaoOrdem').value?Number($('tipoOrganizacaoOrdem').value):null,ativo:$('tipoOrganizacaoAtivo').checked};await request(id?`/api/admin/tipos-organizacao/${id}`:'/api/admin/tipos-organizacao',{method:id?'PUT':'POST',body:JSON.stringify(payload)});$('dlgTipoOrganizacao').close();await loadTiposOrganizacao();showMessage('Tipo de organização salvo.','info');}catch(e){showMessage(e.message);}});
+  $('novoTipoEmpresa').addEventListener('click',()=>{
+    if(!state.empresaAtual || state.empresaAtual.organizacao_principal) return;
+    const relacionados=new Set(state.empresaTiposOrganizacao.map(t=>String(t.id)));
+    const disponiveis=state.tiposOrganizacao.filter(t=>t.ativo && !relacionados.has(String(t.id)));
+    $('novoTipoEmpresaSelect').innerHTML=disponiveis.map(t=>`<option value="${t.id}">${esc(t.nome)} (${esc(t.codigo)})</option>`).join('');
+    if(!disponiveis.length){showMessage('Todos os tipos ativos já estão relacionados a esta organização.','info');return;}
+    $('dlgAdicionarTipoEmpresa').showModal();
+  });
+  $('formAdicionarTipoEmpresa').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    try{
+      if(!state.empresaAtual)return;
+      const novoId=$('novoTipoEmpresaSelect').value;
+      const tipo_ids=[...state.empresaTiposOrganizacao.map(t=>t.id),novoId];
+      await request(`/api/admin/empresas/${state.empresaAtual.id}/tipos-organizacao`,{method:'PUT',body:JSON.stringify({tipo_ids})});
+      $('dlgAdicionarTipoEmpresa').close();
+      await loadEmpresaDossier(state.empresaAtual.id);
+      showMessage('Tipo relacionado à organização.','info');
+    }catch(e){showMessage(e.message);}
+  });
+  $('empresaTiposSelecao').addEventListener('click',async ev=>{
+    const btn=ev.target.closest('[data-remover-tipo-empresa]');
+    if(!btn || !state.empresaAtual)return;
+    try{
+      const remover=String(btn.dataset.removerTipoEmpresa);
+      const tipo_ids=state.empresaTiposOrganizacao.filter(t=>String(t.id)!==remover).map(t=>t.id);
+      await request(`/api/admin/empresas/${state.empresaAtual.id}/tipos-organizacao`,{method:'PUT',body:JSON.stringify({tipo_ids})});
+      await loadEmpresaDossier(state.empresaAtual.id);
+      showMessage('Relacionamento removido.','info');
+    }catch(e){showMessage(e.message);}
+  });
   $("contatoEmpresa").addEventListener("change",()=>carregarOrigensContato($("contatoEmpresa").value || empresaManutencaoId()));
   document.addEventListener("click",async ev=>{
+    const editTipoUnidade=ev.target.closest("[data-edit-tipo-unidade]"); if(editTipoUnidade){openTipoUnidade(editTipoUnidade.dataset.editTipoUnidade);return;}
+    const statusTipoUnidade=ev.target.closest("[data-status-tipo-unidade]"); if(statusTipoUnidade){try{await request(`/api/admin/tipos-unidade/${statusTipoUnidade.dataset.statusTipoUnidade}/status`,{method:"PATCH",body:JSON.stringify({ativo:statusTipoUnidade.dataset.ativo==="true"})});await loadTiposUnidade();showMessage("Status atualizado.","info");}catch(e){showMessage(e.message);}return;}
     const edit=ev.target.closest("[data-edit-catalogo]"); if(edit){openCatalogoManutencao(edit.dataset.editCatalogo,edit.dataset.id);return;}
     const st=ev.target.closest("[data-status-catalogo]"); if(st){try{const base=st.dataset.statusCatalogo==="origens"?"origens-contato":"tipos-interacao";await request(`/api/admin/${base}/${st.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({ativo:st.dataset.ativo==="true"})});await loadCatalogoManutencao(st.dataset.statusCatalogo);}catch(e){showMessage(e.message);} }
   });
-  $("formCatalogoManutencao").addEventListener("submit",async ev=>{ev.preventDefault();try{const tipo=$("catalogoTipo").value,id=$("catalogoId").value,empresaId=empresaManutencaoId(),base=tipo==="origens"?"origens-contato":"tipos-interacao";const payload={codigo:$("catalogoCodigo").value.trim(),nome:$("catalogoNome").value.trim(),descricao:$("catalogoDescricao").value.trim()||null,ordem:$("catalogoOrdem").value?Number($("catalogoOrdem").value):null};await request(id?`/api/admin/${base}/${id}`:`/api/admin/empresas/${empresaId}/${base}`,{method:id?"PUT":"POST",body:JSON.stringify(payload)});$("dlgCatalogoManutencao").close();await loadCatalogoManutencao(tipo);showMessage("Registro salvo.","info");}catch(e){showMessage(e.message);}});
+  $("formCatalogoManutencao").addEventListener("submit",async ev=>{ev.preventDefault();try{const tipo=$("catalogoTipo").value,id=$("catalogoId").value,empresaId=empresaManutencaoId();const base=tipo==="origens"?"origens-contato":tipo==="unidades"?"tipos-unidade":"tipos-interacao";const payload={codigo:$("catalogoCodigo").value.trim(),nome:$("catalogoNome").value.trim(),descricao:$("catalogoDescricao").value.trim()||null,ordem:$("catalogoOrdem").value?Number($("catalogoOrdem").value):null};await request(id?`/api/admin/${base}/${id}`:`/api/admin/empresas/${empresaId}/${base}`,{method:id?"PUT":"POST",body:JSON.stringify(payload)});$("dlgCatalogoManutencao").close();if(tipo==="unidades")await loadTiposUnidade();else await loadCatalogoManutencao(tipo);showMessage("Registro salvo.","info");}catch(e){showMessage(e.message);}});
 
   $("novaEmpresa").addEventListener("click", () => openEmpresa());
   $("novoContato").addEventListener("click", () => openContato());

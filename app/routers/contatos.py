@@ -73,8 +73,8 @@ def criar_contato(
     codigo_origem = "OMNI" if dados.canal == "OMNI" else "SITE"
     codigo_tipo_interacao = "OMNI_AGENDAMENTO" if dados.canal == "OMNI" else "FORMULARIO_SITE"
 
-    origem_obj = db.query(OrigemContato).filter(OrigemContato.empresa_id.is_(None), OrigemContato.codigo == codigo_origem, OrigemContato.ativo.is_(True)).first()
-    tipo_obj = db.query(TipoInteracao).filter(TipoInteracao.empresa_id.is_(None), TipoInteracao.codigo == codigo_tipo_interacao, TipoInteracao.ativo.is_(True)).first()
+    origem_obj = db.query(OrigemContato).filter(OrigemContato.codigo == codigo_origem, OrigemContato.ativo.is_(True)).first()
+    tipo_obj = db.query(TipoInteracao).filter(TipoInteracao.codigo == codigo_tipo_interacao, TipoInteracao.ativo.is_(True)).first()
 
     contato = Contato(
         empresa_id=empresa_inicial.id,
