@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db, get_platform_db
+from app.database import get_platform_db, tenant_session
 from app.models.contato import Contato
 from app.models.empresa import Empresa
 from app.models.interacao import Interacao
@@ -31,7 +31,6 @@ FORM_CONTATO_ENDPOINT_CODE = "FORM_CONTATO_MDP"
 def criar_contato(
     dados: ContatoCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
     platform_db: Session = Depends(get_platform_db),
 ):
     endpoint = (
@@ -56,6 +55,11 @@ def criar_contato(
             detail="Empresa destinatária não configurada para o endpoint.",
         )
 
+    with tenant_session(platform_db, endpoint.tenant_id) as db:
+        return _criar_contato_no_tenant(dados, background_tasks, db, platform_db, empresa_slug)
+
+
+def _criar_contato_no_tenant(dados, background_tasks, db, platform_db, empresa_slug):
     empresa_inicial = (
         db.query(Empresa)
         .filter(

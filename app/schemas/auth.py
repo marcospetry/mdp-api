@@ -7,6 +7,7 @@ class LoginRequest(BaseModel):
     senha: str = Field(min_length=1, max_length=512)
     empresa_id: UUID | None = None  # legado temporário; seleção operacional ocorre após o Tenant
     tenant_id: UUID | None = None
+    contexto_plataforma: bool = False
 
 
 class LoginResponse(BaseModel):

@@ -20,27 +20,58 @@ def _database_url(base_url: str, database_name: str) -> str:
 
 # DATABASE_URL continua sendo a URL-base do ambiente. Nesta fase local ela ainda
 # pode apontar para /mdp; os nomes físicos novos são definidos separadamente.
-platform_database_url = _database_url(settings.database_url, settings.platform_database_name)
-tenant_database_url = _database_url(settings.database_url, settings.default_tenant_database_name)
+Base = declarative_base()
 
+platform_database_url = _database_url(settings.database_url, settings.platform_database_name)
+# A conexão PLATAFORMA é a única conexão fixa. Bancos operacionais são
+# resolvidos após validar o TENANT da sessão.
+from contextlib import contextmanager
+from functools import lru_cache
+from fastapi import Depends, HTTPException
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session
 
 def _engine(url: str):
-    return create_engine(
-        url,
-        pool_pre_ping=True,
-        connect_args={"connect_timeout": 5} if url.startswith("postgresql+") else {},
-    )
+    return create_engine(url, pool_pre_ping=True,
+                         connect_args={"connect_timeout": 5} if make_url(url).drivername.startswith("postgresql+") else {})
 
 
 platform_engine = _engine(platform_database_url)
-tenant_engine = _engine(tenant_database_url)
-
 PlatformSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=platform_engine)
-TenantSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=tenant_engine)
 
-# Base continua única para os models declarativos. As sessões determinam em qual
-# banco cada consulta é executada; não usamos Base.metadata.create_all().
-Base = declarative_base()
+
+@lru_cache(maxsize=64)
+def _tenant_session_factory(url: str):
+    return sessionmaker(autocommit=False, autoflush=False, bind=_engine(url))
+
+
+def tenant_connection_url(platform_db: Session, tenant_id):
+    # Importação local evita ciclo de importação com os models.
+    from app.models.platform_auth import PlatformTenant, PlatformTenantDatabase
+    row = platform_db.query(PlatformTenantDatabase).join(
+        PlatformTenant, PlatformTenant.id == PlatformTenantDatabase.tenant_id
+    ).filter(PlatformTenant.id == tenant_id, PlatformTenant.ativo.is_(True),
+             PlatformTenantDatabase.ativo.is_(True)).first()
+    if row is None:
+        raise HTTPException(status_code=503, detail="Banco do TENANT não configurado ou inativo.")
+    # DATABASE_URL fornece o host/usuário/senha específicos do ambiente.
+    # Para infra MDP_SHARED, o cadastro determina o nome físico do banco.
+    # Infra externa/dedicada requer implementação explícita de secret_ref.
+    if row.tipo_infra != "MDP_SHARED":
+        raise HTTPException(status_code=503, detail="Infraestrutura do TENANT ainda não suportada.")
+    if not row.database_name or '/' in row.database_name:
+        raise HTTPException(status_code=503, detail="Nome de banco inválido.")
+    return make_url(_psycopg_url(settings.database_url)).set(database=row.database_name)
+
+
+@contextmanager
+def tenant_session(platform_db: Session, tenant_id):
+    factory = _tenant_session_factory(tenant_connection_url(platform_db, tenant_id))
+    db = factory()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def get_platform_db():
@@ -51,16 +82,3 @@ def get_platform_db():
         db.close()
 
 
-def get_tenant_db():
-    """Banco operacional do Tenant padrão desta primeira etapa (tenant_mdp)."""
-    db = TenantSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Compatibilidade temporária: os CRUDs existentes continuam importando get_db,
-# mas passam a operar no banco operacional tenant_mdp.
-def get_db():
-    yield from get_tenant_db()

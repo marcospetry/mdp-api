@@ -262,7 +262,7 @@ body.admin-authenticated .brand-panel{display:none}
 body.admin-authenticated .auth-panel{display:block;min-height:100vh;padding:0}
 body.admin-authenticated .card{width:100%;max-width:none;min-height:100vh;border:0;border-radius:0;padding:0;background:transparent;box-shadow:none}
 body.admin-authenticated .footer{display:none}
-body.admin-authenticated #message{position:fixed;right:20px;bottom:20px;z-index:1000;max-width:420px}
+body.admin-authenticated #message{position:fixed;right:20px;top:20px;bottom:auto;z-index:1000;max-width:420px}
 
 .admin-topbar{height:68px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid var(--line);background:#101a25;position:sticky;top:0;z-index:30}
 .admin-brand{display:flex;align-items:center;gap:10px;min-width:230px}.admin-brand img{width:44px;height:44px;object-fit:contain}.admin-brand div{display:flex;flex-direction:column}.admin-brand span{font-size:11px;color:var(--muted)}
@@ -529,3 +529,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 /* Destaque de validação local no formulário de contato. */
 .admin-dialog input.field-attention{border-color:#ff7b7b;box-shadow:0 0 0 3px rgba(255,123,123,.16)}
+
+/* Tenant detail / database v0.1 */
+.tenant-summary-grid{margin-bottom:14px}
+.tenant-database-form{max-width:900px;display:grid;gap:12px}
+.tenant-database-form>label{display:grid;gap:6px}
+.tenant-detail-actions{justify-content:flex-end;margin-top:2px}
+.tenant-tab-panel{padding-top:4px}
+
+/* Tenant detail tabs: native hidden is authoritative. */
+[hidden]{display:none!important}
+
+.tenant-inline-action{display:flex;align-items:flex-end;padding-bottom:1px}
+
+.tenant-func-global-off{opacity:.72}.tenant-func-global-off .admin-item-actions button:disabled{opacity:.55;cursor:not-allowed}

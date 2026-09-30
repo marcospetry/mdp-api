@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.database import tenant_session
 from app.models.auth import UsuarioEmpresa, UsuarioTenantLocal
 from app.models.empresa import Empresa
 from app.models.platform_auth import PlatformSessaoUsuario, PlatformTenant, PlatformUsuario, PlatformUsuarioTenant
@@ -67,7 +68,7 @@ def resolve_empresa_tenant(db: Session, platform_usuario_id: UUID):
     return None, None, local
 
 
-def create_session(platform_db: Session, usuario: PlatformUsuario, tenant_id: UUID, empresa_id: UUID | None, ip: str | None, user_agent: str | None):
+def create_session(platform_db: Session, usuario: PlatformUsuario, tenant_id: UUID | None, empresa_id: UUID | None, ip: str | None, user_agent: str | None):
     refresh_token = secrets.token_urlsafe(48)
     sessao = PlatformSessaoUsuario(
         usuario_id=usuario.id,
@@ -75,6 +76,9 @@ def create_session(platform_db: Session, usuario: PlatformUsuario, tenant_id: UU
         expira_em=utcnow() + timedelta(days=settings.refresh_token_days),
         ip_origem=ip,
         user_agent=user_agent,
+        contexto_tipo="TENANT" if tenant_id else "PLATAFORMA",
+        tenant_id=tenant_id,
+        empresa_id=empresa_id,
     )
     platform_db.add(sessao)
     platform_db.flush()
@@ -82,7 +86,7 @@ def create_session(platform_db: Session, usuario: PlatformUsuario, tenant_id: UU
     return sessao, access_token, refresh_token
 
 
-def rotate_refresh_session(platform_db: Session, tenant_db: Session, refresh_token: str):
+def rotate_refresh_session(platform_db: Session, refresh_token: str):
     token = normalize_refresh_token(refresh_token)
     if not token:
         return None, None, None, "EMPTY"
@@ -102,10 +106,31 @@ def rotate_refresh_session(platform_db: Session, tenant_db: Session, refresh_tok
     ).first()
     if not usuario:
         return None, None, None, "USER_INVALID"
-    tenant_id, vinculo = resolve_tenant(platform_db, usuario)
-    if not tenant_id or vinculo == "MULTIPLOS_TENANTS":
-        return None, None, None, "TENANT_INVALID"
-    empresa_id, _, _ = resolve_empresa_tenant(tenant_db, usuario.id)
+    if sessao.contexto_tipo == "PLATAFORMA":
+        if not usuario.is_superadmin:
+            return None, None, None, "PLATFORM_ACCESS_REVOKED"
+        tenant_id, empresa_id = None, None
+    elif sessao.contexto_tipo == "TENANT":
+        tenant_id = sessao.tenant_id
+        if not tenant_id or not resolve_tenant(platform_db, usuario, tenant_id)[1]:
+            return None, None, None, "TENANT_INVALID"
+        with tenant_session(platform_db, tenant_id) as tenant_db:
+            empresa_id, _, local = resolve_empresa_tenant(tenant_db, usuario.id)
+        if not local:
+            return None, None, None, "TENANT_USER_INVALID"
+        # Empresa selecionada precisa continuar autorizada.
+        if sessao.empresa_id and empresa_id != sessao.empresa_id:
+            return None, None, None, "EMPRESA_CHANGED"
+        empresa_id = sessao.empresa_id
+    else:
+        # Compatibilidade com sessoes anteriores a migration: somente tenant unico.
+        tenant_id, vinculo = resolve_tenant(platform_db, usuario)
+        if not tenant_id or vinculo == "MULTIPLOS_TENANTS":
+            return None, None, None, "TENANT_INVALID"
+        with tenant_session(platform_db, tenant_id) as tenant_db:
+            empresa_id, _, local = resolve_empresa_tenant(tenant_db, usuario.id)
+        if not local:
+            return None, None, None, "TENANT_USER_INVALID"
     sessao.revogada_em = now
     sessao.motivo_revogacao = "ROTACAO_REFRESH"
     nova, access, novo_refresh = create_session(platform_db, usuario, tenant_id, empresa_id, sessao.ip_origem, sessao.user_agent)

@@ -4,6 +4,22 @@
     accessToken: null,
     refreshToken: null,
     me: null,
+    tenants: [],
+    tenantDetalhe: null,
+    tenantDatabase: null,
+    tenantBranding: null,
+    tenantUsuarios: [],
+    platformUsuarios: [],
+    platformUsuarioDetalhe: null,
+    tenantFuncionalidades: [],
+    platformFuncionalidades: [],
+    tenantEndpoints: [],
+    tiposEndpoint: [],
+    tipoCanalEditando: null,
+    tenantEndpointEditando: null,
+    funcionalidadeEditando: null,
+    provedoresIntegracao: [],
+    aplicacoesIntegracao: [],
     empresas: [],
     contatos: [],
     origensContato: [],
@@ -105,6 +121,12 @@
     state.adminView = name;
     const map = {
       home:"adminHome",
+      tenants:"adminTenants",
+      usuariosPlataforma:"adminUsuariosPlataforma",
+      funcionalidadesPlataforma:"adminFuncionalidadesPlataforma",
+      tiposCanaisPlataforma:"adminTiposCanaisPlataforma",
+      tenantDetalhe:"adminTenantDetalhe",
+      integracoesPlataforma:"adminIntegracoesPlataforma",
       empresas:"adminEmpresas",
       unidades:"adminUnidades",
       areas:"adminAreas",
@@ -121,6 +143,11 @@
     };
     Object.values(map).forEach(id => $(id).classList.add("hidden"));
     $(map[name] || map.home).classList.remove("hidden");
+    if (name === "tenants") loadTenants();
+    if (name === "usuariosPlataforma") loadUsuariosPlataforma();
+    if (name === "funcionalidadesPlataforma") loadFuncionalidadesPlataforma();
+    if (name === "tiposCanaisPlataforma") loadTiposCanaisPlataforma();
+    if (name === "integracoesPlataforma") loadAplicacoesIntegracao();
     if (name === "empresas") loadEmpresas();
     if (name === "unidades") loadOrgAdmin("unidades");
     if (name === "areas") loadOrgAdmin("areas");
@@ -143,6 +170,9 @@
     $("activeTenantName").textContent = me.tenant_nome || me.tenant_id || "Não identificado";
     $("superadminFlag").textContent = me.is_superadmin ? "Sim" : "Não";
     $("userEmail").textContent = me.email;
+    const platformAdmin = (me.permissoes || []).includes("PLATAFORMA_ADMIN");
+    $$(".platform-only").forEach(el => el.classList.toggle("hidden", !platformAdmin));
+    $$(".tenant-only").forEach(el => el.classList.toggle("hidden", platformAdmin));
     showStep("dashboardStep");
     showAdminView("home");
   }
@@ -163,7 +193,12 @@
     try {
       const body = await request("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email: $("email").value.trim(), senha: $("senha").value, empresa_id: null }),
+        body: JSON.stringify({
+          email: $("email").value.trim(),
+          senha: $("senha").value,
+          empresa_id: null,
+          contexto_plataforma: Boolean($("contextoPlataforma")?.checked),
+        }),
       });
       if (body.status === "AUTHENTICATED") return await finishAuthentication(body);
       state.preauthToken = body.preauth_token;
@@ -237,6 +272,78 @@
   $$("[data-admin-view]").forEach(b => b.addEventListener("click", () => showAdminView(b.dataset.adminView)));
   $$("[data-close]").forEach(b => b.addEventListener("click", () => $(b.dataset.close).close()));
 
+  $("buscaUsuarioPlataforma").addEventListener("input", renderUsuariosPlataforma);
+  $("filtroUsuarioPlataformaAtivo").addEventListener("change", renderUsuariosPlataforma);
+  $("listaUsuariosPlataforma").onclick = (e) => { const b=e.target.closest("[data-edit-platform-user]"); if(b) openUsuarioPlataforma(b.dataset.editPlatformUser); };
+  $("formUsuarioPlataforma").addEventListener("submit", saveUsuarioPlataforma);
+  $("fecharUsuarioPlataforma").onclick = $("cancelarUsuarioPlataforma").onclick = () => $("dlgUsuarioPlataforma").close();
+
+  $("novaFuncionalidade").onclick = () => openFuncionalidade();
+  $("formFuncionalidade").addEventListener("submit", saveFuncionalidade);
+  $("fecharFuncionalidade").onclick = () => $("dlgFuncionalidade").close();
+  $("cancelarFuncionalidade").onclick = () => $("dlgFuncionalidade").close();
+  $("buscaFuncionalidade").addEventListener("input", renderFuncionalidadesPlataforma);
+  $("filtroFuncionalidadeAtiva").addEventListener("change", renderFuncionalidadesPlataforma);
+  $("listaFuncionalidadesPlataforma").onclick = (e) => {
+    const b = e.target.closest("[data-edit-funcionalidade]");
+    if (b) openFuncionalidade(b.dataset.editFuncionalidade);
+  };
+  $("novoTipoCanal").onclick = () => openTipoCanal();
+  $("formTipoCanal").addEventListener("submit", saveTipoCanal);
+  $("fecharTipoCanal").onclick = () => $("dlgTipoCanal").close();
+  $("cancelarTipoCanal").onclick = () => $("dlgTipoCanal").close();
+  $("buscaTipoCanal").addEventListener("input", renderTiposCanaisPlataforma);
+  $("filtroTipoCanalAtivo").addEventListener("change", renderTiposCanaisPlataforma);
+  $("listaTiposCanaisPlataforma").onclick = (e) => {
+    const b = e.target.closest("[data-edit-tipo-canal]");
+    if (b) openTipoCanal(b.dataset.editTipoCanal);
+  };
+  $("novoTenant").onclick = () => openTenant();
+  $("formTenant").addEventListener("submit", saveTenant);
+  $("formTenantDetalheDados").addEventListener("submit", saveTenantDetalheDados);
+  $("formTenantDatabase").addEventListener("submit", saveTenantDatabase);
+  $("formTenantBranding").addEventListener("submit", saveTenantBranding);
+  $("voltarTenants").onclick = () => showAdminView("tenants");
+  $("vincularTenantUsuario").onclick = vincularTenantUsuario;
+  $("tenantUsuariosLista").onclick = (e) => {
+    const b = e.target.closest("[data-toggle-tenant-user]");
+    if (b) toggleTenantUsuario(b.dataset.toggleTenantUser, b.dataset.nextActive === "true");
+  };
+  $("tenantFuncionalidadesLista").onclick = (e) => {
+    const b = e.target.closest("[data-toggle-tenant-func]");
+    if (b) toggleTenantFuncionalidade(b.dataset.toggleTenantFunc, b.dataset.nextActive === "true");
+  };
+  $("novoTenantEndpoint").onclick = () => openTenantEndpoint();
+  $("formTenantEndpoint").addEventListener("submit", saveTenantEndpoint);
+  $("fecharTenantEndpoint").onclick = $("cancelarTenantEndpoint").onclick = () => $("dlgTenantEndpoint").close();
+  $("tenantEndpointTipo").addEventListener("change", refreshTenantEndpointHelp);
+  $("buscaTenantEndpoint").addEventListener("input", renderTenantEndpoints);
+  $("filtroTenantEndpointTipo").addEventListener("change", renderTenantEndpoints);
+  $("tenantEndpointsLista").onclick = (e) => { const b=e.target.closest("[data-edit-tenant-endpoint]"); if(b) openTenantEndpoint(b.dataset.editTenantEndpoint); };
+  $("novaAplicacao").onclick = () => openAplicacao();
+  $("listaAplicacoes").onclick = (e) => { const b=e.target.closest("[data-edit-app]"); if(b) openAplicacao(b.dataset.editApp); };
+  $("formAplicacao").addEventListener("submit", saveAplicacao);
+  $("fecharAplicacao").onclick = $("cancelarAplicacao").onclick = () => $("dlgAplicacao").close();
+
+  $$('[data-tenant-tab]').forEach(b => b.addEventListener("click", () => showTenantTab(b.dataset.tenantTab)));
+  $("buscaTenant").oninput = renderTenants;
+  $("filtroTenantAtivo").onchange = renderTenants;
+  $("listaTenants").onclick = async (event) => {
+    const detalhe = event.target.closest("[data-detail-tenant]");
+    if (detalhe) return openTenantDetalhe(detalhe.dataset.detailTenant);
+    const btn = event.target.closest("[data-status-tenant]");
+    if (!btn) return;
+    const tenant = state.tenants.find(x => x.id === btn.dataset.statusTenant);
+    if (!tenant) return;
+    const novoAtivo = btn.dataset.ativo === "true";
+    if (!window.confirm(`${novoAtivo ? "Ativar" : "Inativar"} o Tenant “${tenant.nome}”?`)) return;
+    try {
+      await request(`/api/platform/tenants/${tenant.id}`, {method:"PATCH", body:JSON.stringify({ativo:novoAtivo})});
+      showMessage(`Tenant ${novoAtivo ? "ativado" : "inativado"}.`, "info");
+      await loadTenants();
+    } catch (e) { showMessage(e.message); }
+  };
+
   function statusEmpresaLabel(v) {
     return ({PROSPECCAO:"Em prospecção",EM_AVALIACAO:"Em avaliação",CLIENTE:"Cliente",DESCARTADA:"Descartada"})[v] || v || "—";
   }
@@ -249,6 +356,685 @@
     if (!v) return "—";
     try { return new Intl.DateTimeFormat("pt-BR", {dateStyle:"short", timeStyle:"short"}).format(new Date(v)); }
     catch (_) { return v; }
+  }
+
+  function isPlatformAdmin() {
+    return (state.me?.permissoes || []).includes("PLATAFORMA_ADMIN");
+  }
+
+  async function loadUsuariosPlataforma() {
+    try {
+      if (!isPlatformAdmin()) throw new Error("Acesso restrito à administração da Plataforma.");
+      state.platformUsuarios = await request("/api/platform/usuarios");
+      renderUsuariosPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderUsuariosPlataforma() {
+    const busca = ($("buscaUsuarioPlataforma")?.value || "").trim().toLowerCase();
+    const ativo = $("filtroUsuarioPlataformaAtivo")?.value || "";
+    const rows = state.platformUsuarios.filter(u => {
+      const texto = `${u.nome || ""} ${u.email || ""}`.toLowerCase();
+      return (!busca || texto.includes(busca)) && (ativo === "" || String(u.ativo) === ativo);
+    });
+    $("listaUsuariosPlataforma").innerHTML = rows.length ? rows.map(u => `
+      <article class="admin-item entity-item">
+        <div class="entity-icon">U</div>
+        <div><h3>${esc(u.nome)}</h3><p>${esc(u.email)}</p><div class="admin-tags"><span class="admin-tag ${u.ativo ? "on" : "off"}">${u.ativo ? "Ativo" : "Inativo"}</span>${u.is_superadmin ? '<span class="admin-tag on">SUPERADMIN</span>' : ''}</div></div>
+        <div class="admin-item-actions"><button type="button" data-edit-platform-user="${u.id}">Detalhes / Acessos</button></div>
+      </article>`).join("") : `<div class="admin-empty">Nenhum usuário encontrado.</div>`;
+  }
+
+  async function openUsuarioPlataforma(id) {
+    try {
+      const u = await request(`/api/platform/usuarios/${id}`);
+      state.platformUsuarioDetalhe = u;
+      $("usuarioPlataformaId").value = u.id;
+      $("usuarioPlataformaNome").value = u.nome;
+      $("usuarioPlataformaEmail").value = u.email;
+      $("usuarioPlataformaAtivo").checked = u.ativo;
+      $("usuarioPlataformaSuperadmin").textContent = u.is_superadmin ? "SUPERADMIN" : "Usuário comum";
+      $("usuarioPlataformaSuperadmin").className = `admin-tag ${u.is_superadmin ? "on" : ""}`;
+      $("usuarioPlataformaTenants").innerHTML = u.tenants.length ? u.tenants.map(t => `
+        <label class="admin-item entity-item" style="cursor:pointer">
+          <div class="entity-icon">T</div><div><h3>${esc(t.tenant_nome)}</h3><p><code>${esc(t.tenant_codigo)}</code>${t.tenant_ativo ? "" : " • Tenant inativo"}</p></div>
+          <div class="admin-item-actions"><input type="checkbox" data-platform-user-tenant="${t.tenant_id}" data-vinculo-id="${t.vinculo_id || ""}" ${t.vinculo_ativo ? "checked" : ""} ${t.tenant_ativo ? "" : "disabled"}></div>
+        </label>`).join("") : `<div class="admin-empty">Nenhum Tenant cadastrado.</div>`;
+      $("dlgUsuarioPlataforma").showModal();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function saveUsuarioPlataforma(event) {
+    event.preventDefault();
+    const u = state.platformUsuarioDetalhe;
+    if (!u) return;
+    try {
+      await request(`/api/platform/usuarios/${u.id}`, {method:"PATCH", body:JSON.stringify({nome:$("usuarioPlataformaNome").value.trim(), email:$("usuarioPlataformaEmail").value.trim(), ativo:$("usuarioPlataformaAtivo").checked})});
+      const checks = $$('[data-platform-user-tenant]', $("usuarioPlataformaTenants"));
+      for (const c of checks) {
+        const original = u.tenants.find(t => t.tenant_id === c.dataset.platformUserTenant);
+        if (!original || c.checked === original.vinculo_ativo) continue;
+        if (original.vinculo_id) {
+          await request(`/api/platform/tenants/${original.tenant_id}/usuarios/${original.vinculo_id}`, {method:"PATCH", body:JSON.stringify({ativo:c.checked})});
+        } else if (c.checked) {
+          await request(`/api/platform/tenants/${original.tenant_id}/usuarios`, {method:"POST", body:JSON.stringify({usuario_id:u.id})});
+        }
+      }
+      $("dlgUsuarioPlataforma").close();
+      showMessage("Usuário e acessos atualizados.", "info");
+      await loadUsuariosPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function loadTenants() {
+    try {
+      if (!isPlatformAdmin()) throw new Error("Acesso restrito à administração da Plataforma.");
+      state.tenants = await request("/api/platform/tenants/");
+      renderTenants();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderTenants() {
+    const busca = ($("buscaTenant")?.value || "").trim().toLowerCase();
+    const ativo = $("filtroTenantAtivo")?.value || "";
+    const rows = state.tenants.filter(t => {
+      const texto = `${t.nome || ""} ${t.codigo || ""} ${t.slug || ""}`.toLowerCase();
+      return (!busca || texto.includes(busca)) && (ativo === "" || String(t.ativo) === ativo);
+    });
+    $("listaTenants").innerHTML = rows.length ? rows.map(t => `
+      <article class="admin-item entity-item">
+        <div class="entity-icon">T</div>
+        <div><h3>${esc(t.nome)}</h3><p><code>${esc(t.codigo)}</code> • ${esc(t.slug)}</p>
+        <div class="admin-tags">${t.tenant_sistema ? `<span class="admin-tag on">Sistema</span>` : ""}<span class="admin-tag ${t.ativo ? "on" : "off"}">${t.ativo ? "Ativo" : "Inativo"}</span></div></div>
+        <div class="admin-item-actions"><button type="button" data-detail-tenant="${t.id}">Detalhes</button>${t.tenant_sistema ? "" : `<button type="button" data-status-tenant="${t.id}" data-ativo="${!t.ativo}">${t.ativo ? "Inativar" : "Ativar"}</button>`}</div>
+      </article>`).join("") : `<div class="admin-empty">Nenhum Tenant encontrado.</div>`;
+  }
+
+  function showTenantTab(name) {
+    const map = {dados:"tenantTabDados", banco:"tenantTabBanco", branding:"tenantTabBranding", usuarios:"tenantTabUsuarios", funcionalidades:"tenantTabFuncionalidades", integracoes:"tenantTabIntegracoes"};
+    Object.values(map).forEach(id => {
+      const panel = $(id);
+      if (!panel) return;
+      panel.hidden = true;
+      panel.classList.add("hidden");
+    });
+    const activePanel = $(map[name] || map.dados);
+    if (activePanel) {
+      activePanel.hidden = false;
+      activePanel.classList.remove("hidden");
+    }
+    $$('[data-tenant-tab]').forEach(b => b.classList.toggle("active", b.dataset.tenantTab === name));
+    if (name === "banco") loadTenantDatabase();
+    if (name === "branding") loadTenantBranding();
+    if (name === "usuarios") loadTenantUsuarios();
+    if (name === "funcionalidades") loadTenantFuncionalidades();
+    if (name === "integracoes") loadTenantEndpoints();
+  }
+
+  async function openTenantDetalhe(id) {
+    let tenant = state.tenants.find(x => x.id === id);
+    try {
+      tenant = await request(`/api/platform/tenants/${id}`);
+      state.tenantDetalhe = tenant;
+      $("tenantDetalheNome").textContent = tenant.nome;
+      $("tenantDetalheResumo").textContent = `${tenant.codigo} • ${tenant.slug}`;
+      $("tenantDetalheCodigoInput").value = tenant.codigo;
+      $("tenantDetalheNomeInput").value = tenant.nome;
+      $("tenantDetalheSlugInput").value = tenant.slug;
+      $("tenantDetalheTipoInput").value = tenant.tenant_sistema ? "Sistema" : "Cliente";
+      $("tenantDetalheAtivoInput").checked = tenant.ativo;
+      $("tenantDetalheAtivoInput").disabled = Boolean(tenant.tenant_sistema);
+      $("tenantDetalheProtecao").textContent = tenant.tenant_sistema ? "Tenant de sistema protegido: não pode ser inativado pelo cadastro." : "";
+      state.tenantDatabase = null;
+      state.tenantBranding = null;
+      state.tenantUsuarios = [];
+      state.platformUsuarios = [];
+      state.tenantEndpoints = [];
+      state.tenantEndpointEditando = null;
+      showAdminView("tenantDetalhe");
+      showTenantTab("dados");
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function saveTenantDetalheDados(event) {
+    event.preventDefault();
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    const payload = {
+      nome: $("tenantDetalheNomeInput").value.trim(),
+      slug: $("tenantDetalheSlugInput").value.trim(),
+    };
+    if (!tenant.tenant_sistema) payload.ativo = $("tenantDetalheAtivoInput").checked;
+    try {
+      const atualizado = await request(`/api/platform/tenants/${tenant.id}`, {method:"PATCH", body:JSON.stringify(payload)});
+      state.tenantDetalhe = atualizado;
+      $("tenantDetalheNome").textContent = atualizado.nome;
+      $("tenantDetalheResumo").textContent = `${atualizado.codigo} • ${atualizado.slug}`;
+      $("tenantDetalheNomeInput").value = atualizado.nome;
+      $("tenantDetalheSlugInput").value = atualizado.slug;
+      $("tenantDetalheAtivoInput").checked = atualizado.ativo;
+      showMessage("Dados gerais do Tenant atualizados.", "info");
+      await loadTenants();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function loadTenantDatabase() {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    state.tenantDatabase = null;
+    $("tenantDbTipoInfra").value = "MDP_SHARED";
+    $("tenantDbHost").value = "";
+    $("tenantDbPorta").value = 5432;
+    $("tenantDbNome").value = "";
+    $("tenantDbUsername").value = "";
+    $("tenantDbVersaoSchema").value = "";
+    $("tenantDbSecretRef").value = "";
+    $("tenantDbAtivo").checked = true;
+    $("tenantDbEstado").textContent = "Carregando configuração...";
+    try {
+      const db = await request(`/api/platform/tenants/${tenant.id}/database`);
+      state.tenantDatabase = db;
+      $("tenantDbTipoInfra").value = db.tipo_infra;
+      $("tenantDbHost").value = db.host;
+      $("tenantDbPorta").value = db.porta;
+      $("tenantDbNome").value = db.database_name;
+      $("tenantDbUsername").value = db.username;
+      $("tenantDbVersaoSchema").value = db.versao_schema || "";
+      $("tenantDbAtivo").checked = db.ativo;
+      $("tenantDbEstado").textContent = "Configuração cadastrada. A referência de segredo existente não é exibida.";
+    } catch (e) {
+      if (e.status === 404) {
+        $("tenantDbEstado").textContent = "Este Tenant ainda não possui configuração de banco cadastrada.";
+      } else { showMessage(e.message); $("tenantDbEstado").textContent = "Não foi possível carregar a configuração."; }
+    }
+  }
+
+  async function saveTenantDatabase(event) {
+    event.preventDefault();
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    const payload = {
+      tipo_infra: $("tenantDbTipoInfra").value,
+      host: $("tenantDbHost").value.trim(),
+      porta: Number($("tenantDbPorta").value),
+      database_name: $("tenantDbNome").value.trim(),
+      username: $("tenantDbUsername").value.trim(),
+      ativo: $("tenantDbAtivo").checked,
+      versao_schema: $("tenantDbVersaoSchema").value.trim() || null,
+    };
+    const secretRef = $("tenantDbSecretRef").value.trim();
+    if (secretRef) payload.secret_ref = secretRef;
+    try {
+      const editing = Boolean(state.tenantDatabase);
+      await request(`/api/platform/tenants/${tenant.id}/database`, {method:editing ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      showMessage(editing ? "Banco do Tenant atualizado." : "Banco do Tenant cadastrado.", "info");
+      await loadTenantDatabase();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function loadTenantBranding() {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    state.tenantBranding = null;
+    $("tenantBrandingHost").value = "";
+    $("tenantBrandingNome").value = tenant.nome || "";
+    $("tenantBrandingCor").value = "";
+    $("tenantBrandingLogo").value = "";
+    $("tenantBrandingFavicon").value = "";
+    $("tenantBrandingAtivo").checked = true;
+    $("tenantBrandingEstado").textContent = "Carregando configuração...";
+    try {
+      const branding = await request(`/api/platform/tenants/${tenant.id}/branding`);
+      state.tenantBranding = branding;
+      $("tenantBrandingHost").value = branding.admin_host || "";
+      $("tenantBrandingNome").value = branding.nome_exibicao || "";
+      $("tenantBrandingCor").value = branding.cor_primaria || "";
+      $("tenantBrandingLogo").value = branding.logo_url || "";
+      $("tenantBrandingFavicon").value = branding.favicon_url || "";
+      $("tenantBrandingAtivo").checked = branding.ativo;
+      $("tenantBrandingEstado").textContent = "Configuração de Domínio / Branding cadastrada.";
+    } catch (e) {
+      if (e.status === 404) {
+        $("tenantBrandingEstado").textContent = "Este Tenant ainda não possui configuração de Domínio / Branding.";
+      } else { showMessage(e.message); $("tenantBrandingEstado").textContent = "Não foi possível carregar a configuração."; }
+    }
+  }
+
+  async function saveTenantBranding(event) {
+    event.preventDefault();
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    const payload = {
+      admin_host: $("tenantBrandingHost").value.trim() || null,
+      nome_exibicao: $("tenantBrandingNome").value.trim() || null,
+      logo_url: $("tenantBrandingLogo").value.trim() || null,
+      favicon_url: $("tenantBrandingFavicon").value.trim() || null,
+      cor_primaria: $("tenantBrandingCor").value.trim() || null,
+      ativo: $("tenantBrandingAtivo").checked,
+    };
+    try {
+      const editing = Boolean(state.tenantBranding);
+      await request(`/api/platform/tenants/${tenant.id}/branding`, {method:editing ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      showMessage(editing ? "Domínio / Branding atualizado." : "Domínio / Branding cadastrado.", "info");
+      await loadTenantBranding();
+    } catch (e) { showMessage(e.message); }
+  }
+
+
+  async function loadTenantUsuarios() {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    $("tenantUsuariosEstado").textContent = "Carregando usuários e vínculos...";
+    try {
+      const [vinculos, usuarios] = await Promise.all([
+        request(`/api/platform/tenants/${tenant.id}/usuarios`),
+        request("/api/platform/usuarios"),
+      ]);
+      state.tenantUsuarios = vinculos;
+      state.platformUsuarios = usuarios;
+      renderTenantUsuarios();
+    } catch (e) {
+      $("tenantUsuariosEstado").textContent = "Não foi possível carregar os acessos do Tenant.";
+      showMessage(e.message);
+    }
+  }
+
+  function renderTenantUsuarios() {
+    const lista = $("tenantUsuariosLista");
+    const select = $("tenantUsuarioDisponivel");
+    if (!lista || !select) return;
+    const vinculados = new Set(state.tenantUsuarios.map(v => v.usuario_id));
+    const disponiveis = state.platformUsuarios.filter(u => u.ativo && !vinculados.has(u.id));
+    select.innerHTML = disponiveis.length
+      ? `<option value="">Selecione...</option>${disponiveis.map(u => `<option value="${u.id}">${esc(u.nome)} — ${esc(u.email)}</option>`).join("")}`
+      : `<option value="">Nenhum usuário central disponível</option>`;
+    $("vincularTenantUsuario").disabled = !disponiveis.length;
+    $("tenantUsuariosEstado").textContent = state.tenantUsuarios.length
+      ? `${state.tenantUsuarios.length} vínculo(s) cadastrado(s) para este Tenant.`
+      : "Este Tenant ainda não possui usuários vinculados.";
+    lista.innerHTML = state.tenantUsuarios.length ? state.tenantUsuarios.map(v => `
+      <article class="admin-item entity-item">
+        <div class="entity-icon">U</div>
+        <div><h3>${esc(v.nome)}</h3><p>${esc(v.email)}</p>
+          <div class="admin-tags">
+            <span class="admin-tag ${v.usuario_ativo ? "on" : "off"}">Usuário ${v.usuario_ativo ? "ativo" : "inativo"}</span>
+            <span class="admin-tag ${v.vinculo_ativo ? "on" : "off"}">Acesso ${v.vinculo_ativo ? "ativo" : "inativo"}</span>
+            ${v.is_superadmin ? '<span class="admin-tag">SUPERADMIN</span>' : ''}
+          </div>
+        </div>
+        <div class="admin-item-actions"><button type="button" data-toggle-tenant-user="${v.vinculo_id}" data-next-active="${v.vinculo_ativo ? "false" : "true"}">${v.vinculo_ativo ? "Inativar acesso" : "Reativar acesso"}</button></div>
+      </article>`).join("") : `<div class="admin-empty">Nenhum usuário vinculado a este Tenant.</div>`;
+  }
+
+  async function vincularTenantUsuario() {
+    const tenant = state.tenantDetalhe;
+    const usuarioId = $("tenantUsuarioDisponivel").value;
+    if (!tenant || !usuarioId) return showMessage("Selecione um usuário central para vincular.");
+    try {
+      await request(`/api/platform/tenants/${tenant.id}/usuarios`, {method:"POST", body:JSON.stringify({usuario_id:usuarioId})});
+      showMessage("Usuário vinculado ao Tenant.", "info");
+      await loadTenantUsuarios();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function toggleTenantUsuario(vinculoId, ativo) {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    try {
+      await request(`/api/platform/tenants/${tenant.id}/usuarios/${vinculoId}`, {method:"PATCH", body:JSON.stringify({ativo})});
+      showMessage(ativo ? "Acesso ao Tenant reativado." : "Acesso ao Tenant inativado.", "info");
+      await loadTenantUsuarios();
+    } catch (e) { showMessage(e.message); }
+  }
+
+
+  async function loadTenantFuncionalidades() {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    $("tenantFuncionalidadesEstado").textContent = "Carregando catálogo e habilitações...";
+    try {
+      const [catalogo, habilitacoes] = await Promise.all([
+        request("/api/platform/funcionalidades"),
+        request(`/api/platform/tenants/${tenant.id}/funcionalidades`),
+      ]);
+      state.platformFuncionalidades = catalogo;
+      state.tenantFuncionalidades = habilitacoes;
+      renderTenantFuncionalidades();
+    } catch (e) {
+      $("tenantFuncionalidadesEstado").textContent = "Não foi possível carregar as funcionalidades do Tenant.";
+      showMessage(e.message);
+    }
+  }
+
+  function renderTenantFuncionalidades() {
+    const lista = $("tenantFuncionalidadesLista");
+    const habilitacaoPorFunc = new Map(state.tenantFuncionalidades.map(h => [h.funcionalidade_id, h]));
+    const catalogo = [...state.platformFuncionalidades].sort((a,b) => (a.ordem-b.ordem) || a.nome.localeCompare(b.nome));
+    const ativasGlobais = catalogo.filter(f => f.ativo);
+    const habilitadas = ativasGlobais.filter(f => habilitacaoPorFunc.get(f.id)?.ativo).length;
+    $("tenantFuncionalidadesEstado").textContent = `${habilitadas} de ${ativasGlobais.length} funcionalidade(s) globais ativas habilitada(s) para este Tenant.`;
+    lista.innerHTML = catalogo.length ? catalogo.map(f => {
+      const h = habilitacaoPorFunc.get(f.id);
+      const habilitada = Boolean(h?.ativo);
+      const globalInativa = !f.ativo;
+      return `<article class="admin-item entity-item tenant-func-item ${globalInativa ? "tenant-func-global-off" : ""}">
+        <div class="entity-icon">F</div>
+        <div><h3>${esc(f.nome)}</h3><p><code>${esc(f.codigo)}</code>${f.descricao ? ` • ${esc(f.descricao)}` : ""}</p>
+        <div class="admin-tags"><span class="admin-tag ${f.ativo ? "on" : "off"}">${f.ativo ? "Catálogo ativo" : "Catálogo inativo"}</span><span class="admin-tag ${habilitada ? "on" : "off"}">${habilitada ? "Habilitada no Tenant" : "Não habilitada"}</span></div></div>
+        <div class="admin-item-actions"><button type="button" data-toggle-tenant-func="${f.id}" data-next-active="${!habilitada}" ${globalInativa ? "disabled title=\"Funcionalidade inativa no catálogo global\"" : ""}>${habilitada ? "Desabilitar" : "Habilitar"}</button></div>
+      </article>`;
+    }).join("") : `<div class="admin-empty">Nenhuma funcionalidade cadastrada no catálogo global.</div>`;
+  }
+
+  async function toggleTenantFuncionalidade(funcionalidadeId, ativo) {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    const f = state.platformFuncionalidades.find(x => x.id === funcionalidadeId);
+    if (!f || !f.ativo) return showMessage("A funcionalidade precisa estar ativa no catálogo global.");
+    try {
+      await request(`/api/platform/tenants/${tenant.id}/funcionalidades/${funcionalidadeId}`, {method:"PUT", body:JSON.stringify({ativo})});
+      showMessage(ativo ? "Funcionalidade habilitada para o Tenant." : "Funcionalidade desabilitada para o Tenant.", "info");
+      await loadTenantFuncionalidades();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function endpointHelp(tipo) {
+    const map = {
+      SITE:["Domínio público", "Identificador técnico/externo (opcional)", "Informe o domínio em Identificador público e a URL completa abaixo."],
+      FORMULARIO:["Código/identificador público", "Identificador técnico/externo (opcional)", "Use para formulários públicos do Tenant. A URL deve apontar para o formulário."],
+      EMAIL:["Endereço de e-mail", "Identificador técnico/externo (opcional)", "Cadastre o endereço público. Credenciais de caixa postal não devem ser gravadas aqui."],
+      TELEFONE:["Número público", "Identificador técnico/externo (opcional)", "Cadastre o telefone divulgado pelo Tenant."],
+      WHATSAPP:["Número público", "Phone Number ID / ID técnico", "O número pertence ao Tenant. WABA, coexistência e demais dados Meta serão detalhados na etapa de integração técnica; tokens e secrets ficam fora deste cadastro."],
+      INSTAGRAM:["@usuário / perfil público", "Instagram Account ID", "O perfil pertence ao Tenant. A aplicação Meta usada para integração é cadastrada globalmente na Plataforma."],
+      FACEBOOK:["Página / nome público", "Page ID", "A página pertence ao Tenant. A aplicação Meta usada para integração é cadastrada globalmente na Plataforma."],
+      OMNI_LINK:["Slug / identificador público", "Identificador técnico/externo (opcional)", "Link público Omni pertencente ao Tenant."]
+    };
+    return map[tipo] || ["Identificador público", "Identificador técnico/externo", "Não armazene credenciais ou segredos neste cadastro."];
+  }
+
+  function refreshTenantEndpointHelp() {
+    const [pub, ext, help] = endpointHelp(tipoEndpointSelecionado()?.codigo || "");
+    $("tenantEndpointPublicoLabel").textContent = pub;
+    $("tenantEndpointExternoLabel").textContent = ext;
+    $("tenantEndpointAjuda").textContent = help;
+  }
+
+  function renderTiposEndpointSelects() {
+    const ativos = state.tiposEndpoint.filter(x => x.ativo);
+    const atual = $("tenantEndpointTipo")?.value || "";
+    if ($("tenantEndpointTipo")) {
+      $("tenantEndpointTipo").innerHTML = ativos.map(x => `<option value="${x.id}" data-codigo="${esc(x.codigo)}">${esc(x.nome)}</option>`).join("");
+      if (ativos.some(x => x.id === atual)) $("tenantEndpointTipo").value = atual;
+    }
+    if ($("filtroTenantEndpointTipo")) {
+      const filtro = $("filtroTenantEndpointTipo").value || "";
+      $("filtroTenantEndpointTipo").innerHTML = `<option value="">Todos os tipos</option>` + state.tiposEndpoint.map(x => `<option value="${esc(x.codigo)}">${esc(x.nome)}${x.ativo ? "" : " (inativo)"}</option>`).join("");
+      $("filtroTenantEndpointTipo").value = filtro;
+    }
+  }
+
+  function tipoEndpointSelecionado() {
+    return state.tiposEndpoint.find(x => x.id === $("tenantEndpointTipo")?.value) || null;
+  }
+
+  async function loadTenantEndpoints() {
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    $("tenantEndpointsEstado").textContent = "Carregando integrações e canais...";
+    try {
+      const [tipos, endpoints] = await Promise.all([request("/api/platform/tipos-endpoint"), request(`/api/platform/tenants/${tenant.id}/endpoints/`)]);
+      state.tiposEndpoint = tipos;
+      state.tenantEndpoints = endpoints;
+      renderTiposEndpointSelects();
+      renderTenantEndpoints();
+    } catch (e) {
+      $("tenantEndpointsEstado").textContent = "Não foi possível carregar as integrações e canais deste Tenant.";
+      showMessage(e.message);
+    }
+  }
+
+  function renderTenantEndpoints() {
+    const termo = ($("buscaTenantEndpoint")?.value || "").trim().toLowerCase();
+    const tipo = $("filtroTenantEndpointTipo")?.value || "";
+    const rows = state.tenantEndpoints.filter(x => {
+      if (tipo && x.tipo !== tipo) return false;
+      if (!termo) return true;
+      return [x.tipo,x.codigo,x.nome,x.identificador_publico,x.identificador_externo,x.url].some(v => (v || "").toLowerCase().includes(termo));
+    });
+    $("tenantEndpointsEstado").textContent = `${state.tenantEndpoints.length} canal(is) cadastrado(s) para este Tenant.`;
+    $("tenantEndpointsLista").innerHTML = rows.length ? rows.map(x => `<article class="admin-item entity-item">
+      <div class="entity-icon">C</div><div><h3>${esc(x.nome)}</h3><p><code>${esc(x.tipo)}</code> • ${esc(x.codigo)}</p>
+      <div class="admin-tags"><span class="admin-tag ${x.ativo ? "on" : "off"}">${x.ativo ? "Ativo" : "Inativo"}</span>${x.identificador_publico ? `<span class="admin-tag">${esc(x.identificador_publico)}</span>` : ""}</div>
+      ${x.url ? `<p>${esc(x.url)}</p>` : ""}</div><div class="admin-item-actions"><button type="button" data-edit-tenant-endpoint="${x.id}">Editar</button></div></article>`).join("") : `<div class="admin-empty">Nenhum canal encontrado para o filtro informado.</div>`;
+  }
+
+  function openTenantEndpoint(id = null) {
+    const x = id ? state.tenantEndpoints.find(v => v.id === id) : null;
+    state.tenantEndpointEditando = x || null;
+    $("tenantEndpointId").value = x?.id || "";
+    $("tituloTenantEndpoint").textContent = x ? "Editar Canal do Tenant" : "Novo Canal do Tenant";
+    renderTiposEndpointSelects();
+    const tipoPadrao = state.tiposEndpoint.find(t => t.ativo && t.codigo === "SITE") || state.tiposEndpoint.find(t => t.ativo);
+    $("tenantEndpointTipo").value = x?.tipo_endpoint_id || tipoPadrao?.id || "";
+    $("tenantEndpointCodigo").value = x?.codigo || "";
+    $("tenantEndpointNome").value = x?.nome || "";
+    $("tenantEndpointPublico").value = x?.identificador_publico || "";
+    $("tenantEndpointExterno").value = x?.identificador_externo || "";
+    $("tenantEndpointUrl").value = x?.url || "";
+    $("tenantEndpointAtivo").checked = x?.ativo ?? true;
+    refreshTenantEndpointHelp();
+    $("dlgTenantEndpoint").showModal();
+  }
+
+  async function saveTenantEndpoint(event) {
+    event.preventDefault();
+    const tenant = state.tenantDetalhe;
+    if (!tenant) return;
+    const id = $("tenantEndpointId").value;
+    const payload = {
+      tipo_endpoint_id: $("tenantEndpointTipo").value,
+      codigo: $("tenantEndpointCodigo").value.trim().toUpperCase(),
+      nome: $("tenantEndpointNome").value.trim(),
+      identificador_publico: $("tenantEndpointPublico").value.trim() || null,
+      identificador_externo: $("tenantEndpointExterno").value.trim() || null,
+      url: $("tenantEndpointUrl").value.trim() || null,
+      ativo: $("tenantEndpointAtivo").checked
+    };
+    try {
+      await request(id ? `/api/platform/tenants/${tenant.id}/endpoints/${id}` : `/api/platform/tenants/${tenant.id}/endpoints/`, {method:id ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      $("dlgTenantEndpoint").close();
+      showMessage(id ? "Canal do Tenant atualizado." : "Canal do Tenant cadastrado.", "info");
+      await loadTenantEndpoints();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function loadTiposCanaisPlataforma() {
+    try {
+      if (!isPlatformAdmin()) throw new Error("Acesso restrito à administração da Plataforma.");
+      state.tiposEndpoint = await request("/api/platform/tipos-endpoint");
+      renderTiposCanaisPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderTiposCanaisPlataforma() {
+    const el = $("listaTiposCanaisPlataforma"); if (!el) return;
+    const termo = ($("buscaTipoCanal")?.value || "").trim().toLowerCase();
+    const filtroAtivo = $("filtroTipoCanalAtivo")?.value || "";
+    const arr = state.tiposEndpoint.filter(t => {
+      if (filtroAtivo !== "" && String(Boolean(t.ativo)) !== filtroAtivo) return false;
+      if (!termo) return true;
+      return [t.codigo, t.nome, t.descricao].some(v => (v || "").toLowerCase().includes(termo));
+    });
+    el.innerHTML = arr.length ? arr.map(t => `
+      <article class="admin-item entity-item"><div class="entity-icon">C</div><div><h3>${esc(t.nome)}</h3>
+      <p><code>${esc(t.codigo)}</code>${t.descricao ? ` • ${esc(t.descricao)}` : ""}</p>
+      <div class="admin-tags"><span class="admin-tag ${t.ativo ? "on" : "off"}">${t.ativo ? "Ativo" : "Inativo"}</span><span class="admin-tag">Ordem ${esc(t.ordem)}</span></div></div>
+      <div class="admin-item-actions"><button type="button" data-edit-tipo-canal="${t.id}">Editar</button></div></article>`).join("") : `<div class="admin-empty">Nenhum tipo de canal encontrado.</div>`;
+  }
+
+  function openTipoCanal(id = null) {
+    const t = id ? state.tiposEndpoint.find(x => x.id === id) : null;
+    state.tipoCanalEditando = t || null;
+    $("tipoCanalId").value = t?.id || "";
+    $("tituloTipoCanal").textContent = t ? "Editar Tipo de Canal" : "Novo Tipo de Canal";
+    $("tipoCanalCodigo").value = t?.codigo || "";
+    $("tipoCanalCodigo").disabled = Boolean(t);
+    $("tipoCanalNome").value = t?.nome || "";
+    $("tipoCanalDescricao").value = t?.descricao || "";
+    $("tipoCanalOrdem").value = Number.isInteger(t?.ordem) ? t.ordem : 0;
+    $("tipoCanalAtivo").checked = t?.ativo ?? true;
+    $("dlgTipoCanal").showModal();
+  }
+
+  async function saveTipoCanal(event) {
+    event.preventDefault();
+    const id = $("tipoCanalId").value;
+    const payload = {
+      nome: $("tipoCanalNome").value.trim(),
+      descricao: $("tipoCanalDescricao").value.trim() || null,
+      ordem: Number.parseInt($("tipoCanalOrdem").value || "0", 10),
+      ativo: $("tipoCanalAtivo").checked
+    };
+    if (!id) payload.codigo = $("tipoCanalCodigo").value.trim().toUpperCase();
+    try {
+      await request(id ? `/api/platform/tipos-endpoint/${id}` : "/api/platform/tipos-endpoint", {method:id ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      $("dlgTipoCanal").close();
+      showMessage(id ? "Tipo de canal atualizado." : "Tipo de canal cadastrado.", "info");
+      await loadTiposCanaisPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  async function loadFuncionalidadesPlataforma() {
+    try {
+      if (!isPlatformAdmin()) throw new Error("Acesso restrito à administração da Plataforma.");
+      state.platformFuncionalidades = await request("/api/platform/funcionalidades");
+      renderFuncionalidadesPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderFuncionalidadesPlataforma() {
+    const el = $("listaFuncionalidadesPlataforma"); if (!el) return;
+    const termo = ($("buscaFuncionalidade")?.value || "").trim().toLowerCase();
+    const filtroAtiva = $("filtroFuncionalidadeAtiva")?.value || "";
+    const arr = state.platformFuncionalidades.filter(f => {
+      if (filtroAtiva !== "" && String(Boolean(f.ativo)) !== filtroAtiva) return false;
+      if (!termo) return true;
+      return [f.codigo, f.nome, f.descricao].some(v => (v || "").toLowerCase().includes(termo));
+    });
+    el.innerHTML = arr.length ? arr.map(f => `
+      <article class="admin-item entity-item"><div class="entity-icon">F</div><div><h3>${esc(f.nome)}</h3>
+      <p><code>${esc(f.codigo)}</code>${f.descricao ? ` • ${esc(f.descricao)}` : ""}</p>
+      <div class="admin-tags"><span class="admin-tag ${f.ativo ? "on" : "off"}">${f.ativo ? "Ativa" : "Inativa"}</span><span class="admin-tag">Ordem ${esc(f.ordem)}</span></div></div>
+      <div class="admin-item-actions"><button type="button" data-edit-funcionalidade="${f.id}">Editar</button></div></article>`).join("") : `<div class="admin-empty">Nenhuma funcionalidade encontrada.</div>`;
+  }
+
+  function openFuncionalidade(id = null) {
+    const f = id ? state.platformFuncionalidades.find(x => x.id === id) : null;
+    state.funcionalidadeEditando = f || null;
+    $("funcionalidadeId").value = f?.id || "";
+    $("tituloFuncionalidade").textContent = f ? "Editar Funcionalidade" : "Nova Funcionalidade";
+    $("funcionalidadeCodigo").value = f?.codigo || "";
+    $("funcionalidadeNome").value = f?.nome || "";
+    $("funcionalidadeDescricao").value = f?.descricao || "";
+    $("funcionalidadeOrdem").value = Number.isInteger(f?.ordem) ? f.ordem : 0;
+    $("funcionalidadeAtiva").checked = f?.ativo ?? true;
+    $("dlgFuncionalidade").showModal();
+  }
+
+  async function saveFuncionalidade(event) {
+    event.preventDefault();
+    const id = $("funcionalidadeId").value;
+    const payload = {
+      codigo: $("funcionalidadeCodigo").value.trim().toUpperCase(),
+      nome: $("funcionalidadeNome").value.trim(),
+      descricao: $("funcionalidadeDescricao").value.trim() || null,
+      ordem: Number.parseInt($("funcionalidadeOrdem").value || "0", 10),
+      ativo: $("funcionalidadeAtiva").checked
+    };
+    try {
+      await request(id ? `/api/platform/funcionalidades/${id}` : "/api/platform/funcionalidades", {method:id ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      $("dlgFuncionalidade").close();
+      showMessage(id ? "Funcionalidade atualizada." : "Funcionalidade cadastrada.", "info");
+      await loadFuncionalidadesPlataforma();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  const linesToArray = (v) => (v || "").split(/\r?\n|,/).map(x => x.trim()).filter(Boolean);
+
+  async function loadAplicacoesIntegracao() {
+    try {
+      if (!isPlatformAdmin()) throw new Error("Acesso restrito à administração da Plataforma.");
+      const [provedores, apps] = await Promise.all([request("/api/platform/provedores"), request("/api/platform/aplicacoes")]);
+      state.provedoresIntegracao = provedores;
+      state.aplicacoesIntegracao = apps;
+      renderAplicacoesIntegracao();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderAplicacoesIntegracao() {
+    const el = $("listaAplicacoes"); if (!el) return;
+    el.innerHTML = state.aplicacoesIntegracao.length ? state.aplicacoesIntegracao.map(a => `
+      <article class="admin-item entity-item"><div class="entity-icon">A</div><div><h3>${esc(a.nome)}</h3>
+      <p><code>${esc(a.provedor_codigo)}</code> • ${esc(a.codigo)}${a.app_id ? ` • App ID ${esc(a.app_id)}` : ""}</p>
+      <div class="admin-tags"><span class="admin-tag ${a.ativo ? "on" : "off"}">${a.ativo ? "Ativa" : "Inativa"}</span>${a.modo ? `<span class="admin-tag">${esc(a.modo)}</span>` : ""}${a.status_revisao ? `<span class="admin-tag">${esc(a.status_revisao)}</span>` : ""}</div></div>
+      <div class="admin-item-actions"><button type="button" data-edit-app="${a.id}">Editar</button></div></article>`).join("") : `<div class="admin-empty">Nenhuma aplicação global cadastrada.</div>`;
+  }
+
+  function openAplicacao(id = null) {
+    const a = id ? state.aplicacoesIntegracao.find(x => x.id === id) : null;
+    $("aplicacaoId").value = a?.id || "";
+    $("tituloAplicacao").textContent = a ? "Editar Aplicação" : "Nova Aplicação";
+    $("aplicacaoProvedor").innerHTML = state.provedoresIntegracao.filter(p => p.ativo).map(p => `<option value="${p.id}">${esc(p.nome)} (${esc(p.codigo)})</option>`).join("");
+    $("aplicacaoProvedor").value = a?.provedor_id || state.provedoresIntegracao[0]?.id || "";
+    $("aplicacaoProvedor").disabled = Boolean(a);
+    $("aplicacaoCodigo").value = a?.codigo || ""; $("aplicacaoCodigo").disabled = Boolean(a);
+    $("aplicacaoNome").value = a?.nome || ""; $("aplicacaoAppId").value = a?.app_id || "";
+    $("aplicacaoBusinessId").value = a?.owner_business_id || ""; $("aplicacaoEmbeddedId").value = a?.embedded_signup_config_id || "";
+    $("aplicacaoGraphVersion").value = a?.graph_api_version || ""; $("aplicacaoModo").value = a?.modo || ""; $("aplicacaoReview").value = a?.status_revisao || "";
+    $("aplicacaoCallback").value = a?.callback_url || ""; $("aplicacaoPermissoes").value = (a?.permissoes || []).join("\n"); $("aplicacaoWebhookCampos").value = (a?.webhook_campos || []).join("\n");
+    $("aplicacaoAppSecretRef").value = ""; $("aplicacaoAccessTokenRef").value = ""; $("aplicacaoVerifyTokenRef").value = "";
+    $("aplicacaoAppSecretRef").placeholder = a?.has_app_secret ? "Referência já cadastrada; deixe vazio para manter" : "Ex.: secrets/meta/mdp-omni/app-secret";
+    $("aplicacaoAccessTokenRef").placeholder = a?.has_access_token ? "Referência já cadastrada; deixe vazio para manter" : "Ex.: secrets/meta/mdp-omni/access-token";
+    $("aplicacaoVerifyTokenRef").placeholder = a?.has_verify_token ? "Referência já cadastrada; deixe vazio para manter" : "Ex.: secrets/meta/mdp-omni/verify-token";
+    $("aplicacaoObs").value = a?.observacoes || ""; $("aplicacaoAtiva").checked = a?.ativo ?? true;
+    $("dlgAplicacao").showModal();
+  }
+
+  async function saveAplicacao(event) {
+    event.preventDefault(); const id=$("aplicacaoId").value;
+    const payload={nome:$("aplicacaoNome").value.trim(),app_id:$("aplicacaoAppId").value.trim()||null,owner_business_id:$("aplicacaoBusinessId").value.trim()||null,embedded_signup_config_id:$("aplicacaoEmbeddedId").value.trim()||null,graph_api_version:$("aplicacaoGraphVersion").value.trim()||null,modo:$("aplicacaoModo").value.trim()||null,status_revisao:$("aplicacaoReview").value.trim()||null,callback_url:$("aplicacaoCallback").value.trim()||null,permissoes:linesToArray($("aplicacaoPermissoes").value),webhook_campos:linesToArray($("aplicacaoWebhookCampos").value),observacoes:$("aplicacaoObs").value.trim()||null,ativo:$("aplicacaoAtiva").checked};
+    if(!id){payload.provedor_id=$("aplicacaoProvedor").value;payload.codigo=$("aplicacaoCodigo").value.trim();}
+    [["app_secret_ref","aplicacaoAppSecretRef"],["access_token_ref","aplicacaoAccessTokenRef"],["verify_token_ref","aplicacaoVerifyTokenRef"]].forEach(([k,e])=>{const v=$(e).value.trim();if(v)payload[k]=v;});
+    try { await request(id?`/api/platform/aplicacoes/${id}`:"/api/platform/aplicacoes",{method:id?"PATCH":"POST",body:JSON.stringify(payload)}); $("dlgAplicacao").close(); showMessage(id?"Aplicação atualizada.":"Aplicação cadastrada.","info"); await loadAplicacoesIntegracao(); } catch(e){showMessage(e.message);}
+  }
+
+  function openTenant(id = null) {
+    const t = id ? state.tenants.find(x => x.id === id) : null;
+    $("tenantId").value = t?.id || "";
+    $("tituloTenant").textContent = t ? "Editar Tenant" : "Novo Tenant";
+    $("tenantCodigo").value = t?.codigo || "";
+    $("tenantCodigo").disabled = !!t;
+    $("tenantNome").value = t?.nome || "";
+    $("tenantSlug").value = t?.slug || "";
+    $("tenantAtivo").checked = t?.ativo ?? true;
+    $("tenantAtivo").disabled = !!t?.tenant_sistema;
+    $("tenantCodigoAviso").classList.toggle("hidden", !t);
+    $("dlgTenant").showModal();
+  }
+
+  async function saveTenant(event) {
+    event.preventDefault();
+    const id = $("tenantId").value;
+    const atual = id ? state.tenants.find(x => x.id === id) : null;
+    const payload = {nome:$("tenantNome").value.trim(), slug:$("tenantSlug").value.trim()};
+    if (!atual?.tenant_sistema) payload.ativo = $("tenantAtivo").checked;
+    if (!id) payload.codigo = $("tenantCodigo").value.trim();
+    try {
+      await request(id ? `/api/platform/tenants/${id}` : "/api/platform/tenants/", {method:id ? "PATCH" : "POST", body:JSON.stringify(payload)});
+      $("dlgTenant").close();
+      showMessage(id ? "Tenant atualizado." : "Tenant criado.", "info");
+      await loadTenants();
+    } catch (e) { showMessage(e.message); }
   }
 
   function empresaOptions({includeSemEmpresa=true, selected=""}={}) {
@@ -603,8 +1389,11 @@
       refreshEmpresaSelects();
       const empresaVinculada = state.empresas.find(e => String(e.id) === String(c?.empresa_id || ""));
       $("contatoEmpresa").value = empresaVinculada?.slug === "sem-empresa" ? "" : (c?.empresa_id || "");
-      $("contatoAcoesEmpresa").classList.toggle("hidden", !c);
-      $("criarEmpresaDoContato").disabled = !c;
+      const podeCriarEmpresa = Boolean(c && empresaVinculada?.organizacao_principal === true);
+      $("contatoAcoesEmpresa").classList.toggle("hidden", !podeCriarEmpresa);
+      $("criarEmpresaDoContato").disabled = !podeCriarEmpresa;
+      $("excluirContatoDefinitivo").classList.toggle("hidden", !c);
+      $("excluirContatoDefinitivo").disabled = !c;
       $("dlgContato").showModal();
     } catch(e) { showMessage(e.message); }
   }
@@ -772,8 +1561,31 @@
         telefone:$("contatoTelefone").value.trim()||null,
         status:"PROSPECCAO"
       })});
-      state.empresas=[]; await ensureEmpresas(); $("contatoEmpresa").value=c.empresa_id; showMessage(`Empresa criada e contato vinculado a ${c.empresa_nome}.`,"info");
+      state.empresas=[]; await ensureEmpresas(); $("contatoEmpresa").value=c.empresa_id;
+      $("contatoAcoesEmpresa").classList.add("hidden");
+      $("criarEmpresaDoContato").disabled = true;
+      showMessage(`Empresa criada e contato vinculado a ${c.empresa_nome}.`,"info");
     } catch(e){ showMessage(e.message); }
+  });
+
+  $("excluirContatoDefinitivo").addEventListener("click", async () => {
+    const id = $("contatoId").value;
+    if (!id) return;
+    const nome = $("contatoNome").value.trim();
+    if (!confirm(`Excluir DEFINITIVAMENTE o contato "${nome}"? Esta ação não pode ser desfeita. Se houver vínculos, a exclusão será bloqueada.`)) return;
+    const botao = $("excluirContatoDefinitivo");
+    botao.disabled = true;
+    try {
+      await request(`/api/admin/contatos/${id}/definitivo`, {method:"DELETE"});
+      $("dlgContato").close();
+      state.contatos = [];
+      await loadContatos();
+      showMessage("Contato excluído definitivamente.", "info");
+    } catch (e) {
+      showMessage(e.message);
+    } finally {
+      botao.disabled = false;
+    }
   });
 
   async function loadCategorias() {

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MDP Consultoria | Acesso</title>
-  <link rel="stylesheet" href="/admin-assets/login-v018.css?v=tipos-unidade-2">
+  <link rel="stylesheet" href="/admin-assets/login-v018.css?v=tenant-detail-db-1">
 </head>
 <body>
   <main class="shell">
@@ -37,6 +37,12 @@
               <input id="senha" type="password" autocomplete="current-password" required>
               <button id="togglePassword" type="button" class="text-button" aria-label="Mostrar ou ocultar senha">Mostrar</button>
             </div>
+
+            <label class="platform-login-option" for="contextoPlataforma">
+              <input id="contextoPlataforma" type="checkbox">
+              <span>Administrar Plataforma MDP</span>
+            </label>
+            <p class="muted platform-login-help">Use esta op&ccedil;&atilde;o somente para cadastros globais da Plataforma.</p>
 
             <button id="loginButton" class="primary" type="submit">Entrar</button>
           </form>
@@ -112,7 +118,25 @@
             <nav class="admin-menu">
               <button type="button" class="admin-menu-button" data-admin-view="home">In&iacute;cio</button>
 
-              <div class="admin-dropdown-wrap">
+              <div class="admin-dropdown-wrap platform-only hidden">
+                <button type="button" class="admin-menu-button">Plataforma &#9662;</button>
+                <div class="admin-dropdown">
+                  <button type="button" data-admin-view="tenants">Tenants</button>
+                  <button type="button" data-admin-view="usuariosPlataforma">Usuários</button>
+                  <button type="button" data-admin-view="funcionalidadesPlataforma">Funcionalidades</button>
+                  <button type="button" disabled title="Gestão consolidada futura das liberações de funcionalidades por Tenant.">Funcionalidades por Tenant (futuro)</button>
+                  <button type="button" data-admin-view="integracoesPlataforma">Provedores / Aplicações</button>
+                </div>
+              </div>
+
+              <div class="admin-dropdown-wrap platform-only hidden">
+                <button type="button" class="admin-menu-button">Cadastros Auxiliares &#9662;</button>
+                <div class="admin-dropdown">
+                  <button type="button" data-admin-view="tiposCanaisPlataforma">Tipos de Canais</button>
+                </div>
+              </div>
+
+              <div class="admin-dropdown-wrap tenant-only">
                 <button type="button" class="admin-menu-button">Cadastros &#9662;</button>
                 <div class="admin-dropdown">
                   <div class="admin-dropdown-section">Empresas</div>
@@ -124,7 +148,7 @@
                 </div>
               </div>
 
-              <div class="admin-dropdown-wrap">
+              <div class="admin-dropdown-wrap tenant-only">
                 <button type="button" class="admin-menu-button">Manuten&ccedil;&atilde;o &#9662;</button>
                 <div class="admin-dropdown">
                   <button type="button" data-admin-view="origensContato">Origens/Canais</button>
@@ -136,7 +160,7 @@
 
               <div class="admin-menu-separator" aria-hidden="true"></div>
 
-              <div class="admin-dropdown-wrap">
+              <div class="admin-dropdown-wrap tenant-only">
                 <button type="button" class="admin-menu-button">Perguntas / Respostas &#9662;</button>
                 <div class="admin-dropdown">
                   <button type="button" data-admin-view="categorias">Categorias</button>
@@ -196,6 +220,200 @@
                   <span>Monte e versione formulários com drag-and-drop e regras condicionais.</span>
                 </button>
               </div>
+            </section>
+
+            <section id="adminUsuariosPlataforma" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Plataforma › Usuários</p>
+                  <h2>Usuários da Plataforma</h2>
+                  <p class="muted">Identidades centrais e vínculos de acesso aos Tenants. Senha, MFA e primeiro acesso não são administrados nesta etapa.</p>
+                </div>
+                <button type="button" class="admin-secondary" disabled title="Será habilitado junto ao fluxo de primeiro acesso por token.">+ Novo Usuário (futuro)</button>
+              </div>
+              <div class="admin-toolbar companies">
+                <input id="buscaUsuarioPlataforma" placeholder="Buscar por nome ou e-mail...">
+                <select id="filtroUsuarioPlataformaAtivo"><option value="">Todos os status</option><option value="true" selected>Ativos</option><option value="false">Inativos</option></select>
+              </div>
+              <div class="admin-note"><strong>Escopo atual:</strong> consultar/editar identidades centrais existentes e administrar quais Tenants cada usuário pode acessar. SUPERADMIN é exibido, mas não é alterado por esta tela.</div>
+              <div id="listaUsuariosPlataforma" class="admin-list"></div>
+            </section>
+
+            <section id="adminFuncionalidadesPlataforma" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Plataforma › Funcionalidades</p>
+                  <h2>Funcionalidades</h2>
+                  <p class="muted">Catálogo global da Plataforma. A liberação de cada funcionalidade para um Tenant é administrada na ficha do próprio Tenant.</p>
+                </div>
+                <button type="button" id="novaFuncionalidade" class="admin-primary">+ Nova Funcionalidade</button>
+              </div>
+              <div class="admin-toolbar companies">
+                <input id="buscaFuncionalidade" placeholder="Buscar por código, nome ou descrição...">
+                <select id="filtroFuncionalidadeAtiva">
+                  <option value="">Todos os status</option>
+                  <option value="true" selected>Ativas</option>
+                  <option value="false">Inativas</option>
+                </select>
+              </div>
+              <div id="listaFuncionalidadesPlataforma" class="admin-list"></div>
+            </section>
+
+            <section id="adminTiposCanaisPlataforma" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Plataforma › Cadastros Auxiliares › Tipos de Canais</p>
+                  <h2>Tipos de Canais</h2>
+                  <p class="muted">Catálogo global dos tipos de canais/endpoints que podem ser associados aos Tenants. Os canais concretos são cadastrados na ficha de cada Tenant.</p>
+                </div>
+                <button type="button" id="novoTipoCanal" class="admin-primary">+ Novo Tipo de Canal</button>
+              </div>
+              <div class="admin-toolbar companies">
+                <input id="buscaTipoCanal" placeholder="Buscar por código, nome ou descrição...">
+                <select id="filtroTipoCanalAtivo">
+                  <option value="">Todos os status</option>
+                  <option value="true" selected>Ativos</option>
+                  <option value="false">Inativos</option>
+                </select>
+              </div>
+              <div id="listaTiposCanaisPlataforma" class="admin-list"></div>
+            </section>
+
+            <section id="adminTenants" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Plataforma › Tenants</p>
+                  <h2>Tenants</h2>
+                  <p class="muted">Clientes/ambientes administrados pela Plataforma MDP. Nesta etapa, mantenha os dados gerais e o status do Tenant.</p>
+                </div>
+                <button type="button" id="novoTenant" class="admin-primary">+ Novo Tenant</button>
+              </div>
+              <div class="admin-toolbar companies">
+                <input id="buscaTenant" placeholder="Buscar por nome, código ou slug...">
+                <select id="filtroTenantAtivo">
+                  <option value="">Todos os status</option>
+                  <option value="true" selected>Ativos</option>
+                  <option value="false">Inativos</option>
+                </select>
+              </div>
+              <div id="listaTenants" class="admin-list"></div>
+            </section>
+
+            <section id="adminTenantDetalhe" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Plataforma › Tenants › Detalhe</p>
+                  <h2 id="tenantDetalheNome">Tenant</h2>
+                  <p id="tenantDetalheResumo" class="muted">Configuração do Tenant na Plataforma MDP.</p>
+                </div>
+                <button type="button" id="voltarTenants" class="admin-secondary">← Voltar para Tenants</button>
+              </div>
+
+              <div class="company-tabs" id="tenantDetalheTabs">
+                <button type="button" class="company-tab active" data-tenant-tab="dados">Dados Gerais</button>
+                <button type="button" class="company-tab" data-tenant-tab="banco">Banco de Dados</button>
+                <button type="button" class="company-tab" data-tenant-tab="branding">Domínio / Branding</button>
+                <button type="button" class="company-tab" data-tenant-tab="usuarios">Usuários do Tenant</button>
+                <button type="button" class="company-tab" data-tenant-tab="integracoes">Integrações / Canais</button>
+              </div>
+
+              <div id="tenantTabDados" class="company-tab-panel tenant-tab-panel">
+                <form id="formTenantDetalheDados" class="tenant-database-form">
+                  <div class="admin-note"><strong>Identidade do Tenant:</strong> o código é definido na criação e permanece imutável. Tenants de sistema não podem ser inativados pelo cadastro.</div>
+                  <div class="admin-form-row">
+                    <label>Código *<input id="tenantDetalheCodigoInput" maxlength="30" disabled></label>
+                    <label>Nome *<input id="tenantDetalheNomeInput" maxlength="150" required></label>
+                  </div>
+                  <div class="admin-form-row">
+                    <label>Slug *<input id="tenantDetalheSlugInput" maxlength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label>
+                    <label>Tipo<input id="tenantDetalheTipoInput" disabled></label>
+                  </div>
+                  <label class="check-label"><input id="tenantDetalheAtivoInput" type="checkbox"> Tenant ativo</label>
+                  <p id="tenantDetalheProtecao" class="muted"></p>
+                  <div class="dialog-actions tenant-detail-actions">
+                    <button type="submit" class="admin-primary">Salvar Dados Gerais</button>
+                  </div>
+                </form>
+              </div>
+
+              <div id="tenantTabBanco" class="company-tab-panel tenant-tab-panel hidden" hidden>
+                <form id="formTenantDatabase" class="tenant-database-form">
+                  <div class="admin-note"><strong>Configuração técnica:</strong> estes dados pertencem à Plataforma. Segredos não são retornados pela API nem exibidos nesta tela.</div>
+                  <div class="admin-form-row">
+                    <label>Tipo de infraestrutura *
+                      <select id="tenantDbTipoInfra" required>
+                        <option value="MDP_SHARED">MDP_SHARED</option>
+                      </select>
+                    </label>
+                    <label>Host *<input id="tenantDbHost" maxlength="255" required placeholder="Ex.: postgres-mdp"></label>
+                  </div>
+                  <div class="admin-form-row">
+                    <label>Porta *<input id="tenantDbPorta" type="number" min="1" max="65535" value="5432" required></label>
+                    <label>Nome do banco *<input id="tenantDbNome" maxlength="150" pattern="[A-Za-z][A-Za-z0-9_]*" required placeholder="Ex.: tenant_mdp"></label>
+                  </div>
+                  <div class="admin-form-row">
+                    <label>Usuário *<input id="tenantDbUsername" maxlength="150" required></label>
+                    <label>Versão do schema<input id="tenantDbVersaoSchema" maxlength="50" placeholder="Opcional"></label>
+                  </div>
+                  <label>Referência segura do segredo
+                    <input id="tenantDbSecretRef" maxlength="1000" autocomplete="off" placeholder="Opcional. Em edição, deixe vazio para manter a referência atual.">
+                  </label>
+                  <label class="check-label"><input id="tenantDbAtivo" type="checkbox" checked> Configuração de banco ativa</label>
+                  <p id="tenantDbEstado" class="muted"></p>
+                  <div class="dialog-actions tenant-detail-actions">
+                    <button type="submit" class="admin-primary">Salvar Banco de Dados</button>
+                  </div>
+                </form>
+              </div>
+
+              <div id="tenantTabBranding" class="company-tab-panel tenant-tab-panel hidden" hidden>
+                <form id="formTenantBranding" class="tenant-database-form">
+                  <div class="admin-note"><strong>White-label do Backoffice:</strong> estes dados definem a identidade e o host administrativo do Tenant. Salvar o host aqui não configura DNS, certificado ou Traefik automaticamente.</div>
+                  <label>Domínio / host do Admin
+                    <input id="tenantBrandingHost" maxlength="255" pattern="[A-Za-z0-9.-]+" placeholder="Ex.: painel.cliente.com.br">
+                  </label>
+                  <div class="admin-form-row">
+                    <label>Nome de exibição<input id="tenantBrandingNome" maxlength="150" placeholder="Ex.: Cliente - Portal de Gestão"></label>
+                    <label>Cor principal<input id="tenantBrandingCor" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#123456"></label>
+                  </div>
+                  <label>Logo - URL ou referência<input id="tenantBrandingLogo" maxlength="2000" placeholder="Ex.: /admin-assets/logo-cliente.png"></label>
+                  <label>Favicon - URL ou referência<input id="tenantBrandingFavicon" maxlength="2000" placeholder="Ex.: /admin-assets/favicon-cliente.png"></label>
+                  <label class="check-label"><input id="tenantBrandingAtivo" type="checkbox" checked> Domínio / Branding ativo</label>
+                  <p id="tenantBrandingEstado" class="muted"></p>
+                  <div class="dialog-actions tenant-detail-actions"><button type="submit" class="admin-primary">Salvar Domínio / Branding</button></div>
+                </form>
+              </div>
+
+              <div id="tenantTabUsuarios" class="company-tab-panel tenant-tab-panel hidden" hidden>
+                <div class="admin-note"><strong>Acesso ao Tenant:</strong> a identidade do usuário é central na Plataforma. Aqui administramos somente o vínculo com este Tenant. Perfil operacional e permissões por funcionalidade serão tratados nas etapas próprias, sem duplicar senha ou MFA.</div>
+                <div class="admin-form-row">
+                  <label>Vincular usuário existente
+                    <select id="tenantUsuarioDisponivel"></select>
+                  </label>
+                  <div class="tenant-inline-action"><button type="button" id="vincularTenantUsuario" class="admin-primary">Vincular usuário</button></div>
+                </div>
+                <p id="tenantUsuariosEstado" class="muted"></p>
+                <div id="tenantUsuariosLista" class="admin-list"></div>
+              </div>
+
+              <div id="tenantTabFuncionalidades" class="company-tab-panel tenant-tab-panel hidden" hidden>
+                <div class="admin-note"><strong>Funcionalidades do Tenant:</strong> o catálogo é definido globalmente pela Plataforma. Aqui apenas habilitamos ou desabilitamos o que este Tenant pode utilizar. Uma funcionalidade inativa no catálogo global não pode ser habilitada no Tenant.</div>
+                <p id="tenantFuncionalidadesEstado" class="muted"></p>
+                <div id="tenantFuncionalidadesLista" class="admin-list"></div>
+              </div>
+
+              <div id="tenantTabIntegracoes" class="company-tab-panel tenant-tab-panel hidden" hidden>
+                <div class="admin-page-head tenant-subhead"><div><div class="admin-note"><strong>Integrações / Canais:</strong> cadastre os pontos de contato e identificação pertencentes a este Tenant. Aplicações globais, como Meta / MDP Omni, continuam em Plataforma → Provedores / Aplicações. Não armazene tokens, senhas ou App Secrets aqui.</div></div><button type="button" id="novoTenantEndpoint" class="admin-primary">+ Novo Canal</button></div>
+                <div class="admin-toolbar companies"><input id="buscaTenantEndpoint" placeholder="Buscar por tipo, nome, código ou identificador..."><select id="filtroTenantEndpointTipo"><option value="">Todos os tipos</option></select></div>
+                <p id="tenantEndpointsEstado" class="muted"></p>
+                <div id="tenantEndpointsLista" class="admin-list"></div>
+              </div>
+            </section>
+
+            <section id="adminIntegracoesPlataforma" class="admin-view hidden">
+              <div class="admin-page-head"><div><p class="kicker">Plataforma › Integrações</p><h2>Provedores / Aplicações</h2><p class="muted">Aplicações globais usadas pela Plataforma. Ativos de cada cliente serão vinculados posteriormente no Tenant.</p></div><button type="button" id="novaAplicacao" class="admin-primary">+ Nova Aplicação</button></div>
+              <div class="admin-note"><strong>Segurança:</strong> App Secret, Access Token e Verify Token não são exibidos. Esta tela armazena somente referências seguras para essas credenciais.</div>
+              <div id="listaAplicacoes" class="admin-list"></div>
             </section>
 
             <section id="adminEmpresas" class="admin-view hidden">
@@ -614,6 +832,7 @@
                 <button type="button" id="criarEmpresaDoContato" class="admin-secondary">Criar empresa a partir deste contato</button>
               </div>
               <div class="dialog-actions">
+                <button type="button" id="excluirContatoDefinitivo" class="admin-secondary hidden">Excluir definitivamente</button>
                 <button type="button" class="admin-secondary" data-close="dlgContato">Cancelar</button>
                 <button type="submit" class="admin-primary">Salvar contato</button>
               </div>
@@ -815,6 +1034,25 @@
             </form>
           </dialog>
 
+          <dialog id="dlgTenant" class="admin-dialog">
+            <form id="formTenant">
+              <div class="dialog-head">
+                <div><h3 id="tituloTenant">Novo Tenant</h3><p>Dados gerais do Tenant na Plataforma MDP.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgTenant">×</button>
+              </div>
+              <input type="hidden" id="tenantId">
+              <label>Código *<input id="tenantCodigo" maxlength="50" pattern="[A-Za-z0-9_-]+" required placeholder="Ex.: CLIENTE_A"></label>
+              <label>Nome *<input id="tenantNome" maxlength="150" required placeholder="Nome do cliente / Tenant"></label>
+              <label>Slug *<input id="tenantSlug" maxlength="100" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required placeholder="Ex.: cliente-a"></label>
+              <label class="check-label"><input id="tenantAtivo" type="checkbox" checked> Tenant ativo</label>
+              <p id="tenantCodigoAviso" class="muted hidden">O código é imutável após a criação. Nome, slug e status podem ser alterados.</p>
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgTenant">Cancelar</button>
+                <button type="submit" class="admin-primary">Salvar Tenant</button>
+              </div>
+            </form>
+          </dialog>
+
           <dialog id="dlgPergunta" class="admin-dialog wide">
             <form id="formPergunta">
               <div class="dialog-head">
@@ -927,6 +1165,78 @@
     </section>
   </main>
 
-  <script src="/admin-assets/login-v018.js?v=tipos-unidade-2"></script>
+    <dialog id="dlgTenantEndpoint" class="admin-dialog">
+      <form id="formTenantEndpoint" method="dialog">
+        <div class="dialog-head"><div><h3 id="tituloTenantEndpoint">Canal do Tenant</h3><p>Site, formulário, e-mail, telefone e redes sociais pertencentes ao Tenant.</p></div><button type="button" id="fecharTenantEndpoint">×</button></div>
+        <input id="tenantEndpointId" type="hidden">
+        <div class="admin-form-row"><label>Tipo *<select id="tenantEndpointTipo" required></select></label><label>Código *<input id="tenantEndpointCodigo" maxlength="100" required placeholder="Ex.: INSTAGRAM_MDP"></label></div>
+        <label>Nome *<input id="tenantEndpointNome" maxlength="150" required placeholder="Ex.: Instagram MDP Consultoria"></label>
+        <div class="admin-form-row"><label><span id="tenantEndpointPublicoLabel">Identificador público</span><input id="tenantEndpointPublico" maxlength="255" placeholder="Ex.: @perfil, domínio, e-mail ou telefone"></label><label><span id="tenantEndpointExternoLabel">Identificador técnico/externo</span><input id="tenantEndpointExterno" maxlength="255" placeholder="Ex.: ID fornecido pelo provedor"></label></div>
+        <label>URL<input id="tenantEndpointUrl" type="url" placeholder="https://..."></label>
+        <div id="tenantEndpointAjuda" class="admin-note"></div>
+        <label class="check-label"><input id="tenantEndpointAtivo" type="checkbox" checked> Canal ativo</label>
+        <div class="dialog-actions"><button type="button" id="cancelarTenantEndpoint" class="admin-secondary">Cancelar</button><button type="submit" class="admin-primary">Salvar Canal</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgAplicacao" class="admin-dialog">
+      <form id="formAplicacao" method="dialog">
+        <div class="dialog-head"><div><h3 id="tituloAplicacao">Aplicação</h3><p>Configuração global da aplicação do provedor.</p></div><button type="button" id="fecharAplicacao">×</button></div>
+        <input id="aplicacaoId" type="hidden">
+        <div class="admin-form-row"><label>Provedor *<select id="aplicacaoProvedor" required></select></label><label>Código *<input id="aplicacaoCodigo" maxlength="100" required placeholder="Ex.: MDP_OMNI"></label></div>
+        <div class="admin-form-row"><label>Nome *<input id="aplicacaoNome" maxlength="150" required></label><label>App ID<input id="aplicacaoAppId" maxlength="255"></label></div>
+        <div class="admin-form-row"><label>Business/Portfólio proprietário ID<input id="aplicacaoBusinessId" maxlength="255"></label><label>Embedded Signup Configuration ID<input id="aplicacaoEmbeddedId" maxlength="255"></label></div>
+        <div class="admin-form-row"><label>Versão Graph API<input id="aplicacaoGraphVersion" maxlength="50" placeholder="Ex.: vXX.X"></label><label>Modo<input id="aplicacaoModo" maxlength="30" placeholder="Ex.: LIVE / TESTE"></label></div>
+        <div class="admin-form-row"><label>Status de revisão/acesso<input id="aplicacaoReview" maxlength="50"></label><label>Callback URL<input id="aplicacaoCallback" type="url"></label></div>
+        <label>Permissões / recursos<textarea id="aplicacaoPermissoes" rows="3" placeholder="Uma por linha"></textarea></label>
+        <label>Campos de webhook assinados<textarea id="aplicacaoWebhookCampos" rows="3" placeholder="Um por linha"></textarea></label>
+        <div class="admin-note">Referências seguras: em edição, deixe vazio para manter a referência atual. Nunca informe o segredo/token real nestes campos.</div>
+        <div class="admin-form-row"><label>Referência do App Secret<input id="aplicacaoAppSecretRef" autocomplete="off"></label><label>Referência do Access Token<input id="aplicacaoAccessTokenRef" autocomplete="off"></label></div>
+        <label>Referência do Verify Token<input id="aplicacaoVerifyTokenRef" autocomplete="off"></label>
+        <label>Observações<textarea id="aplicacaoObs" rows="3"></textarea></label>
+        <label class="check-label"><input id="aplicacaoAtiva" type="checkbox" checked> Aplicação ativa</label>
+        <div class="dialog-actions"><button type="button" id="cancelarAplicacao" class="admin-secondary">Cancelar</button><button type="submit" class="admin-primary">Salvar Aplicação</button></div>
+      </form>
+    </dialog>
+
+  
+    <dialog id="dlgUsuarioPlataforma" class="admin-dialog">
+      <form id="formUsuarioPlataforma" method="dialog">
+        <div class="dialog-head"><div><h3>Usuário da Plataforma</h3><p>Identidade central e acessos aos Tenants.</p></div><button type="button" id="fecharUsuarioPlataforma">×</button></div>
+        <input id="usuarioPlataformaId" type="hidden">
+        <div class="admin-form-row"><label>Nome *<input id="usuarioPlataformaNome" maxlength="150" required></label><label>E-mail / login *<input id="usuarioPlataformaEmail" type="email" maxlength="255" required></label></div>
+        <div class="admin-form-row"><label class="check-label"><input id="usuarioPlataformaAtivo" type="checkbox"> Usuário ativo</label><div><span id="usuarioPlataformaSuperadmin" class="admin-tag"></span></div></div>
+        <div class="admin-note">SUPERADMIN é privilégio global e permanece somente leitura nesta etapa. Senha e MFA não são exibidos nem alterados.</div>
+        <h4>Tenants autorizados</h4>
+        <div id="usuarioPlataformaTenants" class="admin-list"></div>
+        <div class="dialog-actions"><button type="button" id="cancelarUsuarioPlataforma" class="admin-secondary">Cancelar</button><button type="submit" class="admin-primary">Salvar Usuário e Acessos</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgFuncionalidade" class="admin-dialog">
+      <form id="formFuncionalidade" method="dialog">
+        <div class="dialog-head"><div><h3 id="tituloFuncionalidade">Funcionalidade</h3><p>Cadastro global da Plataforma. Não define nem monta menus dinamicamente.</p></div><button type="button" id="fecharFuncionalidade">×</button></div>
+        <input id="funcionalidadeId" type="hidden">
+        <div class="admin-form-row"><label>Código *<input id="funcionalidadeCodigo" maxlength="100" required placeholder="Ex.: CONTATOS"></label><label>Nome *<input id="funcionalidadeNome" maxlength="150" required placeholder="Ex.: Contatos"></label></div>
+        <label>Descrição<textarea id="funcionalidadeDescricao" rows="3"></textarea></label>
+        <div class="admin-form-row"><label>Ordem<input id="funcionalidadeOrdem" type="number" step="1" value="0"></label><label class="check-label"><input id="funcionalidadeAtiva" type="checkbox" checked> Funcionalidade ativa no catálogo</label></div>
+        <div class="admin-note">Ativar uma funcionalidade no catálogo não a libera automaticamente para nenhum Tenant. A relação Tenant × Funcionalidade é administrada separadamente.</div>
+        <div class="dialog-actions"><button type="button" id="cancelarFuncionalidade" class="admin-secondary">Cancelar</button><button type="submit" class="admin-primary">Salvar Funcionalidade</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgTipoCanal" class="admin-dialog">
+      <form id="formTipoCanal" method="dialog">
+        <div class="dialog-head"><div><h3 id="tituloTipoCanal">Tipo de Canal</h3><p>Cadastro auxiliar global da Plataforma. Não representa um canal de um Tenant.</p></div><button type="button" id="fecharTipoCanal">×</button></div>
+        <input id="tipoCanalId" type="hidden">
+        <div class="admin-form-row"><label>Código *<input id="tipoCanalCodigo" maxlength="50" required placeholder="Ex.: WHATSAPP"></label><label>Nome *<input id="tipoCanalNome" maxlength="100" required placeholder="Ex.: WhatsApp"></label></div>
+        <label>Descrição<textarea id="tipoCanalDescricao" rows="3"></textarea></label>
+        <div class="admin-form-row"><label>Ordem<input id="tipoCanalOrdem" type="number" step="1" value="0"></label><label class="check-label"><input id="tipoCanalAtivo" type="checkbox" checked> Tipo ativo</label></div>
+        <div class="admin-note">O código é definido na criação e não é alterado na edição. Inativar um tipo impede seu uso em novos canais, sem apagar os vínculos existentes.</div>
+        <div class="dialog-actions"><button type="button" id="cancelarTipoCanal" class="admin-secondary">Cancelar</button><button type="submit" class="admin-primary">Salvar Tipo de Canal</button></div>
+      </form>
+    </dialog>
+
+  <script src="/admin-assets/login-v018.js?v=platform-usuarios-1"></script>
 </body>
 </html>

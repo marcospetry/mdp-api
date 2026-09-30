@@ -5,14 +5,14 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db
 from app.models.empresa import Empresa
 from app.models.tipo_organizacao import EmpresaTipoOrganizacao, TipoOrganizacao
 from app.schemas.tipo_organizacao import TipoOrganizacaoCreate, TipoOrganizacaoResponse, TipoOrganizacaoUpdate, TiposEmpresaUpdate
-from app.security.dependencies import get_current_context, require_empresa_access
+from app.security.dependencies import require_tenant_context, get_current_context, require_empresa_access
 
 
-router = APIRouter(prefix="/api/admin", tags=["Admin - Tipos de Organização"], dependencies=[Depends(get_current_context)])
+router = APIRouter(prefix="/api/admin", tags=["Admin - Tipos de Organização"], dependencies=[Depends(require_tenant_context)])
 
 
 def _require_admin(context):

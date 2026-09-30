@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import get_platform_db, get_tenant_db
+from app.database import get_platform_db, tenant_session
+from app.security.dependencies import get_authorized_tenant_db
 from app.models.auth import PerfilPermissao
 from app.models.platform_auth import PlatformTenant, PlatformUsuario
 from app.schemas.auth import LoginRequest, LoginResponse, LogoutRequest, MFASetupResponse, MFAVerifyRequest, MeResponse, RefreshRequest
@@ -29,7 +30,7 @@ def _usuario_por_preauth(db: Session, token: str, purpose: str):
         ).first()
         if not usuario:
             raise jwt.InvalidTokenError("Usuário inválido")
-        return usuario, UUID(payload["tenant_id"])
+        return usuario, UUID(payload["tenant_id"]) if payload.get("tenant_id") else None
     except (jwt.InvalidTokenError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Token de pré-autenticação inválido ou expirado.")
 
@@ -52,11 +53,21 @@ def login(dados: LoginRequest, request: Request, db: Session = Depends(get_platf
 
     usuario.tentativas_login = 0
     usuario.bloqueado_ate = None
-    tenant_id, vinculo = resolve_tenant(db, usuario, dados.tenant_id)
+    # Um unico tenant autorizado e selecionado automaticamente, inclusive
+    # para SUPERADMIN. Acesso exclusivamente a Plataforma e explicito.
+    if usuario.is_superadmin and dados.contexto_plataforma:
+        if dados.tenant_id is not None:
+            raise HTTPException(status_code=422, detail="Selecione Plataforma ou tenant, nao ambos.")
+        tenant_id, vinculo = None, None
+    else:
+        tenant_id, vinculo = resolve_tenant(db, usuario, dados.tenant_id)
+        if usuario.is_superadmin and tenant_id is None and vinculo is None and dados.tenant_id is None:
+            # SUPERADMIN sem vinculo operacional permanece na Plataforma.
+            tenant_id, vinculo = None, None
     if vinculo == "MULTIPLOS_TENANTS":
         db.commit()
         raise HTTPException(status_code=409, detail="Informe tenant_id para selecionar o Tenant ativo.")
-    if not tenant_id:
+    if not tenant_id and not usuario.is_superadmin:
         db.commit()
         raise HTTPException(status_code=403, detail="Usuário sem Tenant ativo autorizado.")
 
@@ -82,7 +93,7 @@ def mfa_setup(preauth_token: str, db: Session = Depends(get_platform_db)):
 
 
 @router.post("/mfa/verify", response_model=LoginResponse)
-def mfa_verify(dados: MFAVerifyRequest, request: Request, platform_db: Session = Depends(get_platform_db), tenant_db: Session = Depends(get_tenant_db)):
+def mfa_verify(dados: MFAVerifyRequest, request: Request, platform_db: Session = Depends(get_platform_db)):
     try:
         payload = decode_token(dados.preauth_token, "preauth")
         purpose = payload.get("purpose")
@@ -100,9 +111,17 @@ def mfa_verify(dados: MFAVerifyRequest, request: Request, platform_db: Session =
         usuario.mfa_habilitado = True
         usuario.mfa_confirmado_em = utcnow()
 
-    empresa_id, _, local = resolve_empresa_tenant(tenant_db, usuario.id)
-    if not local:
-        raise HTTPException(status_code=403, detail="Usuário autenticado na plataforma, mas não provisionado no Tenant MDP.")
+    if tenant_id is None:
+        if not usuario.is_superadmin:
+            raise HTTPException(status_code=403, detail="Acesso à Plataforma não autorizado.")
+        empresa_id = None
+    else:
+        if not resolve_tenant(platform_db, usuario, tenant_id)[1]:
+            raise HTTPException(status_code=403, detail="Tenant não autorizado.")
+        with tenant_session(platform_db, tenant_id) as tenant_db:
+            empresa_id, _, local = resolve_empresa_tenant(tenant_db, usuario.id)
+        if not local:
+            raise HTTPException(status_code=403, detail="Usuário não provisionado no Tenant.")
     sessao, access, refresh = create_session(platform_db, usuario, tenant_id, empresa_id, request.client.host if request.client else None, request.headers.get("user-agent"))
     usuario.ultimo_login_em = utcnow()
     platform_db.commit()
@@ -110,9 +129,9 @@ def mfa_verify(dados: MFAVerifyRequest, request: Request, platform_db: Session =
 
 
 @router.post("/refresh", response_model=LoginResponse)
-def refresh(dados: RefreshRequest, platform_db: Session = Depends(get_platform_db), tenant_db: Session = Depends(get_tenant_db)):
+def refresh(dados: RefreshRequest, platform_db: Session = Depends(get_platform_db)):
     fingerprint = refresh_token_fingerprint(dados.refresh_token)
-    nova_sessao, access, novo_refresh, motivo = rotate_refresh_session(platform_db, tenant_db, dados.refresh_token)
+    nova_sessao, access, novo_refresh, motivo = rotate_refresh_session(platform_db, dados.refresh_token)
     if motivo:
         logger.warning("refresh_rejected reason=%s fingerprint=%s", motivo, fingerprint)
         raise HTTPException(status_code=401, detail="Refresh token inválido ou expirado.")
@@ -134,22 +153,26 @@ def logout(dados: LogoutRequest, context=Depends(get_current_context), db: Sessi
 @router.get("/me", response_model=MeResponse)
 def me(
     context=Depends(get_current_context),
-    db: Session = Depends(get_tenant_db),
     platform_db: Session = Depends(get_platform_db),
 ):
     usuario = context["usuario"]
     vinculo = context["vinculo"]
-    perfil = vinculo.perfil.codigo if vinculo else None
+    perfil = vinculo.perfil.codigo if vinculo else ("SUPERADMIN" if context["tenant_id"] is None else None)
     permissoes = []
-    if vinculo and vinculo.perfil.acesso_total:
+    if context["tenant_id"] is None and usuario.is_superadmin:
+        permissoes = ["PLATAFORMA_ADMIN"]
+    elif vinculo and vinculo.perfil.acesso_total:
         permissoes = ["*"]
     elif vinculo:
-        rows = db.query(PerfilPermissao).filter(PerfilPermissao.perfil_id == vinculo.perfil_id).all()
-        permissoes = sorted([r.permissao.codigo for r in rows if r.permissao.ativo])
-    tenant = platform_db.query(PlatformTenant).filter(
-        PlatformTenant.id == context["tenant_id"],
-        PlatformTenant.ativo.is_(True),
-    ).first()
+        with tenant_session(platform_db, context["tenant_id"]) as tenant_db:
+            rows = tenant_db.query(PerfilPermissao).filter(PerfilPermissao.perfil_id == vinculo.perfil_id).all()
+            permissoes = sorted([r.permissao.codigo for r in rows if r.permissao.ativo])
+    tenant = None
+    if context["tenant_id"] is not None:
+        tenant = platform_db.query(PlatformTenant).filter(
+            PlatformTenant.id == context["tenant_id"],
+            PlatformTenant.ativo.is_(True),
+        ).first()
     return MeResponse(
         id=usuario.id,
         nome=usuario.nome,

@@ -3,11 +3,11 @@ import unicodedata
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db
 from app.models.contato import Contato
 from app.models.empresa import Empresa
 from app.models.interacao import Interacao
@@ -20,13 +20,13 @@ from app.schemas.contato_admin import (
     VincularEmpresaRequest,
 )
 from app.schemas.empresa import EmpresaCreate, EmpresaDetalheResponse, EmpresaResponse, EmpresaUpdate
-from app.security.dependencies import get_current_context, require_empresa_access
+from app.security.dependencies import get_current_context, require_empresa_access, require_tenant_context
 
 
 router = APIRouter(
     prefix="/api/admin",
     tags=["Admin - Empresas e Contatos"],
-    dependencies=[Depends(get_current_context)],
+    dependencies=[Depends(require_tenant_context)],
 )
 
 SEM_EMPRESA_SLUG = "sem-empresa"
@@ -337,6 +337,56 @@ def descartar_contato(contato_id: UUID, db: Session = Depends(get_db), context=D
     return _contato_response(db, contato)
 
 
+@router.delete("/contatos/{contato_id}/definitivo", status_code=status.HTTP_204_NO_CONTENT)
+def excluir_contato_definitivamente(contato_id: UUID, db: Session = Depends(get_db), context=Depends(get_current_context)):
+    # Bloqueio de linha: evita concorrência com outra exclusão/conversão do mesmo contato.
+    contato = db.query(Contato).filter(Contato.id == contato_id).with_for_update().first()
+    if contato is None:
+        raise HTTPException(status_code=404, detail="Contato não encontrado.")
+    require_empresa_access(context, contato.empresa_id)
+
+    # Inspeciona as FKs REAIS do tenant, inclusive as que usam ON DELETE CASCADE.
+    # Os nomes de tabela/coluna vêm do catálogo PostgreSQL, nunca da requisição.
+    dependencias = db.execute(text("""
+        SELECT n.nspname AS schema_nome, t.relname AS tabela, a.attname AS coluna
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = c.conkey[1]
+        WHERE c.contype = 'f'
+          AND c.confrelid = 'public.contatos'::regclass
+          AND array_length(c.conkey, 1) = 1
+          AND array_length(c.confkey, 1) = 1
+        ORDER BY n.nspname, t.relname
+    """)).mappings().all()
+    # Se existir FK composta para contatos, não excluir sem uma revisão específica.
+    compostas = db.execute(text("""
+        SELECT count(*) FROM pg_constraint c
+        WHERE c.contype = 'f' AND c.confrelid = 'public.contatos'::regclass
+          AND (array_length(c.conkey, 1) <> 1 OR array_length(c.confkey, 1) <> 1)
+    """)).scalar_one()
+    if compostas:
+        raise HTTPException(status_code=409, detail="Exclusão bloqueada: há relacionamentos compostos que precisam de validação específica.")
+    vinculados = []
+    for fk in dependencias:
+        schema = '"' + fk['schema_nome'].replace('"', '""') + '"'
+        tabela = '"' + fk['tabela'].replace('"', '""') + '"'
+        coluna = '"' + fk['coluna'].replace('"', '""') + '"'
+        total = db.execute(text(f'SELECT count(*) FROM {schema}.{tabela} WHERE {coluna} = :id'), {'id': contato_id}).scalar_one()
+        if total:
+            vinculados.append(f"{fk['tabela']} ({total})")
+    if vinculados:
+        raise HTTPException(status_code=409, detail="Exclusão bloqueada: contato possui vínculos em " + ", ".join(vinculados) + ".")
+
+    try:
+        db.delete(contato)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Exclusão bloqueada: existem relacionamentos com este contato.")
+    return None
+
+
 @router.put("/contatos/{contato_id}/empresa", response_model=ContatoAdminResponse)
 def vincular_empresa(contato_id: UUID, dados: VincularEmpresaRequest, db: Session = Depends(get_db), context=Depends(get_current_context)):
     contato = _contato_ou_404(db, contato_id)
@@ -360,7 +410,12 @@ def criar_empresa_a_partir_do_contato(
 ):
     if not context["usuario"].is_superadmin:
         raise HTTPException(status_code=403, detail="Somente administrador MDP pode criar empresa a partir de contato.")
-    contato = _contato_ou_404(db, contato_id)
+    contato = db.query(Contato).filter(Contato.id == contato_id).with_for_update().first()
+    if contato is None:
+        raise HTTPException(status_code=404, detail="Contato não encontrado.")
+    empresa_atual = _empresa_ou_404(db, contato.empresa_id)
+    if not empresa_atual.organizacao_principal:
+        raise HTTPException(status_code=409, detail="Este contato já está vinculado a uma empresa. Não é permitido criar outra empresa a partir dele.")
     nome = (dados.nome or contato.empresa_contato or "").strip()
     if not nome:
         raise HTTPException(status_code=400, detail="Informe o nome da empresa.")

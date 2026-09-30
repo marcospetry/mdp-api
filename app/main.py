@@ -1,3 +1,9 @@
+from app.routers.platform_usuarios import router as platform_usuarios_router
+from app.routers.platform_tipos_endpoint import router as platform_tipos_endpoint_router
+from app.routers.platform_integracoes import router as platform_integracoes_router
+from app.routers.platform_funcionalidades import router as platform_funcionalidades_router
+from app.routers.platform_tenants import router as platform_tenants_router
+from app.routers.platform_tenant_endpoints import router as platform_tenant_endpoints_router
 from app.routers.whatsapp_webhook import router as whatsapp_webhook_router
 from app.routers.admin_manutencao import router as admin_manutencao_router
 from app.routers.admin_tipos_organizacao import router as admin_tipos_organizacao_router
@@ -57,6 +63,12 @@ app.include_router(admin_organizacao_router)
 app.include_router(admin_manutencao_router)
 app.include_router(admin_tipos_organizacao_router)
 app.include_router(whatsapp_webhook_router)
+app.include_router(platform_tenants_router)
+app.include_router(platform_funcionalidades_router)
+app.include_router(platform_tenant_endpoints_router)
+app.include_router(platform_tipos_endpoint_router)
+app.include_router(platform_integracoes_router)
+app.include_router(platform_usuarios_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
