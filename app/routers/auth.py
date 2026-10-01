@@ -181,6 +181,7 @@ def me(
         empresa_id=context["empresa_id"],
         tenant_id=context["tenant_id"],
         tenant_nome=tenant.nome if tenant else None,
+        contexto_tipo=context["contexto_tipo"],
         perfil=perfil,
         permissoes=permissoes,
     )

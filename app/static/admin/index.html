@@ -172,7 +172,7 @@
 
 
             <div class="admin-tenant" title="Tenant atualmente selecionado">
-              <span>Tenant ativo</span>
+              <span>Contexto ativo</span>
               <strong id="activeTenantName">—</strong>
             </div>
 
@@ -198,7 +198,7 @@
                 <div><span>E-mail</span><strong id="userEmail">—</strong></div>
               </div>
 
-              <div class="admin-module-grid">
+              <div class="admin-module-grid tenant-only">
                 <button type="button" class="admin-module-card" data-admin-view="empresas">
                   <b>▣</b><strong>Empresas</strong>
                   <span>Prospects, clientes e organizações vinculadas aos contatos.</span>
@@ -1158,7 +1158,7 @@
           </template>
         </div>
 
-        <div id="message" class="message hidden" role="alert"></div>
+        <div id="message" class="message hidden" role="alert" popover="manual"></div>
       </div>
 
       <p class="footer">MDP Consultoria • acesso autorizado</p>

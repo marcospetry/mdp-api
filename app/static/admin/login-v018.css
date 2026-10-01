@@ -262,7 +262,7 @@ body.admin-authenticated .brand-panel{display:none}
 body.admin-authenticated .auth-panel{display:block;min-height:100vh;padding:0}
 body.admin-authenticated .card{width:100%;max-width:none;min-height:100vh;border:0;border-radius:0;padding:0;background:transparent;box-shadow:none}
 body.admin-authenticated .footer{display:none}
-body.admin-authenticated #message{position:fixed;right:20px;top:20px;bottom:auto;z-index:1000;max-width:420px}
+body.admin-authenticated #message{position:fixed;right:20px;left:auto;top:20px;bottom:auto;margin:0;z-index:1000;max-width:420px}
 
 .admin-topbar{height:68px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid var(--line);background:#101a25;position:sticky;top:0;z-index:30}
 .admin-brand{display:flex;align-items:center;gap:10px;min-width:230px}.admin-brand img{width:44px;height:44px;object-fit:contain}.admin-brand div{display:flex;flex-direction:column}.admin-brand span{font-size:11px;color:var(--muted)}

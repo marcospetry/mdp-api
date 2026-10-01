@@ -65,6 +65,7 @@
     const el = $("message");
     el.textContent = text;
     el.className = `message ${type}`;
+    if (typeof el.showPopover === "function" && !el.matches(":popover-open")) el.showPopover();
     if (document.body.classList.contains("admin-authenticated")) {
       window.clearTimeout(showMessage.timer);
       showMessage.timer = window.setTimeout(hideMessage, 3500);
@@ -73,6 +74,7 @@
 
   function hideMessage() {
     const el = $("message");
+    if (typeof el.hidePopover === "function" && el.matches(":popover-open")) el.hidePopover();
     el.textContent = "";
     el.className = "message hidden";
   }
@@ -167,12 +169,12 @@
     $("welcomeName").textContent = `Olá, ${me.nome}`;
     $("companyId").textContent = me.empresa_id || "Acesso global";
     $("profileName").textContent = me.perfil || "Global";
-    $("activeTenantName").textContent = me.tenant_nome || me.tenant_id || "Não identificado";
+    const contextoPlataforma = me.contexto_tipo === "PLATAFORMA";
+    $("activeTenantName").textContent = contextoPlataforma ? "Plataforma" : (me.tenant_nome || me.tenant_id || "Não identificado");
     $("superadminFlag").textContent = me.is_superadmin ? "Sim" : "Não";
     $("userEmail").textContent = me.email;
-    const platformAdmin = (me.permissoes || []).includes("PLATAFORMA_ADMIN");
-    $$(".platform-only").forEach(el => el.classList.toggle("hidden", !platformAdmin));
-    $$(".tenant-only").forEach(el => el.classList.toggle("hidden", platformAdmin));
+    $$(".platform-only").forEach(el => el.classList.toggle("hidden", !contextoPlataforma));
+    $$(".tenant-only").forEach(el => el.classList.toggle("hidden", contextoPlataforma));
     showStep("dashboardStep");
     showAdminView("home");
   }
@@ -1572,7 +1574,7 @@
     const id = $("contatoId").value;
     if (!id) return;
     const nome = $("contatoNome").value.trim();
-    if (!confirm(`Excluir DEFINITIVAMENTE o contato "${nome}"? Esta ação não pode ser desfeita. Se houver vínculos, a exclusão será bloqueada.`)) return;
+    if (!confirm(`Excluir DEFINITIVAMENTE o contato "${nome}"? As interações vinculadas exclusivamente a este contato também serão excluídas. Diagnósticos e outros vínculos históricos bloquearão a exclusão. Esta ação não pode ser desfeita.`)) return;
     const botao = $("excluirContatoDefinitivo");
     botao.disabled = true;
     try {

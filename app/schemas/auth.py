@@ -50,5 +50,6 @@ class MeResponse(BaseModel):
     empresa_id: UUID | None
     tenant_id: UUID | None = None
     tenant_nome: str | None = None
+    contexto_tipo: str
     perfil: str | None
     permissoes: list[str]

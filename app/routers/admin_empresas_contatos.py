@@ -367,18 +367,29 @@ def excluir_contato_definitivamente(contato_id: UUID, db: Session = Depends(get_
     """)).scalar_one()
     if compostas:
         raise HTTPException(status_code=409, detail="Exclusão bloqueada: há relacionamentos compostos que precisam de validação específica.")
-    vinculados = []
+    # Interações pertencem exclusivamente ao Contato e podem ser removidas junto com ele.
+    # Qualquer outra FK com registros (ex.: Diagnósticos) preserva o histórico e bloqueia a exclusão.
+    dependencias_exclusivas = {("public", "interacoes", "contato_id")}
+    vinculados_bloqueantes = []
     for fk in dependencias:
-        schema = '"' + fk['schema_nome'].replace('"', '""') + '"'
-        tabela = '"' + fk['tabela'].replace('"', '""') + '"'
-        coluna = '"' + fk['coluna'].replace('"', '""') + '"'
+        schema_nome = fk["schema_nome"]
+        tabela_nome = fk["tabela"]
+        coluna_nome = fk["coluna"]
+        schema = '"' + schema_nome.replace('"', '""') + '"'
+        tabela = '"' + tabela_nome.replace('"', '""') + '"'
+        coluna = '"' + coluna_nome.replace('"', '""') + '"'
         total = db.execute(text(f'SELECT count(*) FROM {schema}.{tabela} WHERE {coluna} = :id'), {'id': contato_id}).scalar_one()
-        if total:
-            vinculados.append(f"{fk['tabela']} ({total})")
-    if vinculados:
-        raise HTTPException(status_code=409, detail="Exclusão bloqueada: contato possui vínculos em " + ", ".join(vinculados) + ".")
+        if total and (schema_nome, tabela_nome, coluna_nome) not in dependencias_exclusivas:
+            vinculados_bloqueantes.append(f"{tabela_nome} ({total})")
+    if vinculados_bloqueantes:
+        raise HTTPException(
+            status_code=409,
+            detail="Exclusão bloqueada: contato possui vínculos históricos em " + ", ".join(vinculados_bloqueantes) + ".",
+        )
 
     try:
+        # Exclusão explícita: não depende de cascade implícito para a regra funcional aprovada.
+        db.query(Interacao).filter(Interacao.contato_id == contato.id).delete(synchronize_session=False)
         db.delete(contato)
         db.commit()
     except IntegrityError:
