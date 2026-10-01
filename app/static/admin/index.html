@@ -161,8 +161,10 @@
               <div class="admin-menu-separator" aria-hidden="true"></div>
 
               <div class="admin-dropdown-wrap tenant-only">
-                <button type="button" class="admin-menu-button">Perguntas / Respostas &#9662;</button>
+                <button type="button" class="admin-menu-button">Diagnóstico &#9662;</button>
                 <div class="admin-dropdown">
+                  <button type="button" data-admin-view="aplicacoesDiagnostico">Aplicações</button>
+                  <div class="admin-dropdown-divider" aria-hidden="true"></div>
                   <button type="button" data-admin-view="categorias">Categorias</button>
                   <button type="button" data-admin-view="perguntas">Perguntas</button>
                   <button type="button" data-admin-view="formularios">Formul&aacute;rios</button>
@@ -517,6 +519,28 @@
               <div id="listaTiposUnidade" class="admin-list"></div>
             </section>
 
+            <section id="adminAplicacoesDiagnostico" class="admin-view hidden">
+              <div class="admin-page-head">
+                <div>
+                  <p class="kicker">Diagnóstico › Aplicações</p>
+                  <h2>Aplicações de formulário</h2>
+                  <p class="muted">Atribua um formulário existente a um contato e acompanhe as aplicações criadas.</p>
+                </div>
+                <button type="button" id="novaAplicacaoDiagnostico" class="admin-primary">+ Atribuir formulário</button>
+              </div>
+              <div class="admin-toolbar contacts">
+                <input id="buscaAplicacaoDiagnostico" placeholder="Buscar contato ou formulário...">
+                <select id="filtroAplicacaoStatus">
+                  <option value="">Todas as situações</option>
+                  <option value="AGUARDANDO_RESPOSTA">Aguardando resposta</option>
+                  <option value="EM_PREENCHIMENTO">Em preenchimento</option>
+                  <option value="RESPONDIDO">Respondido</option>
+                  <option value="REVOGADO">Revogado</option>
+                </select>
+              </div>
+              <div id="listaAplicacoesDiagnostico" class="admin-list"></div>
+            </section>
+
             <section id="adminCategorias" class="admin-view hidden">
               <div class="admin-page-head">
                 <div>
@@ -827,6 +851,11 @@
               </div>
               <label>Site / Instagram<input id="contatoSiteInstagram" maxlength="255"></label>
               <label>Mensagem<textarea id="contatoMensagem" rows="3"></textarea></label>
+              <div id="contatoDiagnostico" class="contact-company-actions hidden">
+                <div class="admin-note"><strong>Diagnóstico</strong><br><span id="contatoDiagnosticoResumo">Nenhum formulário atribuído.</span></div>
+                <div id="contatoDiagnosticoLista" class="admin-list" style="width:100%"></div>
+                <button type="button" id="atribuirFormularioContato" class="admin-secondary">Atribuir formulário</button>
+              </div>
               <div id="contatoAcoesEmpresa" class="contact-company-actions hidden">
                 <div class="admin-note">Você pode criar uma empresa em prospecção a partir deste contato e vinculá-la automaticamente.</div>
                 <button type="button" id="criarEmpresaDoContato" class="admin-secondary">Criar empresa a partir deste contato</button>
@@ -835,6 +864,48 @@
                 <button type="button" id="excluirContatoDefinitivo" class="admin-secondary hidden">Excluir definitivamente</button>
                 <button type="button" class="admin-secondary" data-close="dlgContato">Cancelar</button>
                 <button type="submit" class="admin-primary">Salvar contato</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgAtribuirFormulario" class="admin-dialog">
+            <form id="formAtribuirFormulario">
+              <div class="dialog-head">
+                <div><h3>Atribuir formulário de diagnóstico</h3><p>Crie uma aplicação de um formulário existente para um contato.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgAtribuirFormulario">×</button>
+              </div>
+              <label>Contato *<select id="aplicacaoContato" required></select></label>
+              <label>Formulário *<select id="aplicacaoFormulario" required></select></label>
+              <div class="admin-note">Nesta etapa será criada apenas a aplicação do formulário. O link público de resposta será habilitado na próxima evolução.</div>
+              <div class="dialog-actions">
+                <button type="button" class="admin-secondary" data-close="dlgAtribuirFormulario">Cancelar</button>
+                <button type="submit" class="admin-primary">Atribuir formulário</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog id="dlgAplicacaoDiagnostico" class="admin-dialog">
+            <form method="dialog">
+              <div class="dialog-head">
+                <div><h3>Aplicação de diagnóstico</h3><p>Detalhes da atribuição do formulário ao contato.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgAplicacaoDiagnostico">×</button>
+              </div>
+              <div class="admin-note"><strong>Contato</strong><br><span id="aplicacaoDetalheContato">—</span></div>
+              <div class="admin-note"><strong>Formulário atribuído</strong><br><span id="aplicacaoDetalheFormulario">—</span></div>
+              <div class="admin-note"><strong>Situação</strong><br><span id="aplicacaoDetalheStatus">—</span></div>
+              <div class="admin-note"><strong>Atribuído em</strong><br><span id="aplicacaoDetalheData">—</span></div>
+              <div class="admin-note"><strong>Acesso público</strong><br><span id="aplicacaoDetalheAcesso">Ainda não gerado.</span></div>
+              <div id="aplicacaoDetalheLinkBox" class="admin-note hidden">
+                <strong>Link gerado agora</strong><br>
+                <input id="aplicacaoDetalheLink" type="text" readonly style="width:100%;margin-top:8px">
+              </div>
+              <div class="dialog-actions">
+                <button type="button" id="aplicacaoDetalheAbrirContato" class="admin-secondary">Abrir contato</button>
+                <button type="button" id="aplicacaoDetalheGerarAcesso" class="admin-secondary">Gerar acesso público</button>
+                <button type="button" id="aplicacaoDetalheCopiarLink" class="admin-secondary hidden">Copiar link</button>
+                <button type="button" id="aplicacaoDetalheAbrirLink" class="admin-secondary hidden">Abrir formulário</button>
+                <button type="button" id="aplicacaoDetalheRevogarAcesso" class="admin-secondary hidden">Revogar acesso</button>
+                <button type="button" class="admin-primary" data-close="dlgAplicacaoDiagnostico">Fechar</button>
               </div>
             </form>
           </dialog>

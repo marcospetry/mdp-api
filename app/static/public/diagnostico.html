@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Diagnóstico MDP</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a;margin:0}.wrap{max-width:760px;margin:40px auto;padding:0 16px}.card{background:#fff;border:1px solid #dfe5ea;border-radius:14px;padding:24px;margin-bottom:16px}.muted{color:#64748b}.question{border-top:1px solid #e5e7eb;padding-top:18px;margin-top:18px}.option{display:block;margin:9px 0}.error{color:#b42318}input[type=text],input[type=number],textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}button{padding:10px 16px;border:0;border-radius:8px;background:#1f4f78;color:#fff}button:disabled{opacity:.55}
+  </style>
+</head>
+<body><main class="wrap"><section class="card" id="app"><p>Carregando formulário...</p></section></main>
+<script>
+(async()=>{
+  const app=document.getElementById('app');
+  const token=decodeURIComponent(location.pathname.split('/').pop()||'');
+  const esc=v=>(v??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const respostas={};
+
+  try{
+    const r=await fetch(`/api/publico/diagnostico/${encodeURIComponent(token)}`);
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.detail||`Falha HTTP ${r.status}`);
+
+    const perguntas=data.perguntas||[];
+    const regras=data.regras_exibicao||[];
+    const destinos=new Set(regras.map(regra=>regra.pergunta_destino_id));
+
+    function visiveis(){
+      const visible=new Set();
+      perguntas.forEach(p=>{ if(!destinos.has(p.id)) visible.add(p.id); });
+
+      let changed=true;
+      while(changed){
+        changed=false;
+        [...visible].forEach(sourceId=>{
+          const answer=respostas[sourceId];
+          if(answer===undefined||answer===null) return;
+          const selected=Array.isArray(answer)?answer:[answer];
+          selected.forEach(optionId=>{
+            regras
+              .filter(regra=>regra.pergunta_origem_id===sourceId && regra.opcao_origem_id===optionId)
+              .forEach(regra=>{
+                if(!visible.has(regra.pergunta_destino_id)){
+                  visible.add(regra.pergunta_destino_id);
+                  changed=true;
+                }
+              });
+          });
+        });
+      }
+      return visible;
+    }
+
+    function limparOcultas(visible){
+      Object.keys(respostas).forEach(id=>{ if(!visible.has(id)) delete respostas[id]; });
+    }
+
+    function render(){
+      const visible=visiveis();
+      limparOcultas(visible);
+      const campos=perguntas.filter(p=>visible.has(p.id)).map(p=>{
+        let campo='';
+        if(p.opcoes?.length){
+          campo=p.opcoes.map(o=>{
+            const multiple=p.tipo_resposta==='MULTIPLA_ESCOLHA';
+            const checked=multiple
+              ? (respostas[p.id]||[]).includes(o.id)
+              : respostas[p.id]===o.id;
+            return `<label class="option"><input type="${multiple?'checkbox':'radio'}" name="p_${esc(p.id)}" value="${esc(o.id)}" ${checked?'checked':''}> ${esc(o.rotulo)}</label>`;
+          }).join('');
+        }else if(p.tipo_resposta==='NUMERO'){
+          campo=`<input type="number" data-pergunta="${esc(p.id)}" value="${esc(respostas[p.id]??'')}">`;
+        }else{
+          campo=`<textarea rows="3" data-pergunta="${esc(p.id)}">${esc(respostas[p.id]??'')}</textarea>`;
+        }
+        return `<div class="question" data-question="${esc(p.id)}"><div class="muted">${esc(p.categoria||'')}</div><p><strong>${esc(p.pergunta)}</strong>${p.obrigatoria?' *':''}</p>${campo}</div>`;
+      }).join('');
+
+      app.innerHTML=`<h1>${esc(data.formulario.nome)}</h1>${data.formulario.descricao?`<p class="muted">${esc(data.formulario.descricao)}</p>`:''}<p class="muted">Formulário atribuído a ${esc(data.aplicacao.contato_nome||'contato')} · versão ${esc(data.formulario.versao)}</p>${campos}<p class="muted">Nesta etapa o acesso é somente para validação. O envio de respostas será habilitado na próxima etapa.</p><button disabled>Enviar respostas</button>`;
+
+      app.querySelectorAll('input[type="radio"]').forEach(input=>{
+        input.onchange=()=>{
+          const question=input.closest('[data-question]');
+          respostas[question.dataset.question]=input.value;
+          render();
+        };
+      });
+      app.querySelectorAll('input[type="checkbox"]').forEach(input=>{
+        input.onchange=()=>{
+          const question=input.closest('[data-question]');
+          const id=question.dataset.question;
+          const selected=new Set(respostas[id]||[]);
+          input.checked?selected.add(input.value):selected.delete(input.value);
+          respostas[id]=[...selected];
+          render();
+        };
+      });
+      app.querySelectorAll('input[type="number"],textarea').forEach(input=>{
+        input.oninput=()=>{ respostas[input.dataset.pergunta]=input.value; };
+      });
+    }
+
+    render();
+  }catch(e){app.innerHTML=`<h1>Acesso ao diagnóstico</h1><p class="error">${esc(e.message)}</p>`;}
+})();
+</script></body></html>

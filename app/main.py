@@ -12,6 +12,8 @@ from app.routers.admin_empresas_contatos import router as admin_empresas_contato
 from app.routers.diagnostico_estrutura import router as diagnostico_estrutura_router
 from app.routers.diagnostico_formularios import router as diagnostico_formularios_router
 from app.routers.diagnostico_catalogo import router as diagnostico_catalogo_router
+from app.routers.diagnostico_aplicacoes import router as diagnostico_aplicacoes_router
+from app.routers.diagnostico_publico import router as diagnostico_publico_router
 from app.routers.auth import router as auth_router
 from app.routers.contatos import router as contatos_router
 from pathlib import Path
@@ -58,6 +60,8 @@ app.include_router(auth_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)
 app.include_router(diagnostico_estrutura_router)
+app.include_router(diagnostico_aplicacoes_router)
+app.include_router(diagnostico_publico_router)
 app.include_router(admin_empresas_contatos_router)
 app.include_router(admin_organizacao_router)
 app.include_router(admin_manutencao_router)
@@ -72,6 +76,7 @@ app.include_router(platform_usuarios_router)
 
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
+STATIC_PUBLIC_DIR = Path(__file__).resolve().parent / "static" / "public"
 app.mount(
     "/admin-assets",
     StaticFiles(directory=STATIC_ADMIN_DIR),
@@ -87,6 +92,11 @@ def login_page():
 @app.get("/admin", include_in_schema=False)
 def admin_page():
     return FileResponse(STATIC_ADMIN_DIR / "index.html")
+
+
+@app.get("/diagnostico/responder/{token}", include_in_schema=False)
+def diagnostico_publico_page(token: str):
+    return FileResponse(STATIC_PUBLIC_DIR / "diagnostico.html")
 
 
 @app.get("/api/health")

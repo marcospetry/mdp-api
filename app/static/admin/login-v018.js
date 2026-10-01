@@ -35,6 +35,7 @@
     perguntas: [],
     perguntaDetalhe: null,
     formularios: [],
+    aplicacoesDiagnostico: [],
     builderFormulario: null,
     builderPerguntas: [],
     builderRegras: [],
@@ -140,6 +141,7 @@
       categorias:"adminCategorias",
       perguntas:"adminPerguntas",
       formularios:"adminFormularios",
+      aplicacoesDiagnostico:"adminAplicacoesDiagnostico",
       builder:"adminBuilder",
       builderPreview:"adminBuilderPreview"
     };
@@ -161,6 +163,7 @@
     if (name === "categorias") loadCategorias();
     if (name === "perguntas") loadPerguntas();
     if (name === "formularios") loadFormularios();
+    if (name === "aplicacoesDiagnostico") loadAplicacoesDiagnostico();
   }
 
   async function loadMe() {
@@ -1396,6 +1399,8 @@
       $("criarEmpresaDoContato").disabled = !podeCriarEmpresa;
       $("excluirContatoDefinitivo").classList.toggle("hidden", !c);
       $("excluirContatoDefinitivo").disabled = !c;
+      $("contatoDiagnostico").classList.toggle("hidden", !c || String(c.tipo_solicitacao).toUpperCase() !== "DIAGNOSTICO");
+      if (c && String(c.tipo_solicitacao).toUpperCase() === "DIAGNOSTICO") await loadAplicacoesDoContato(c.id);
       $("dlgContato").showModal();
     } catch(e) { showMessage(e.message); }
   }
@@ -1588,6 +1593,219 @@
     } finally {
       botao.disabled = false;
     }
+  });
+
+  function aplicacaoStatusLabel(status) {
+    const labels = {
+      AGUARDANDO_RESPOSTA: "Aguardando resposta",
+      EM_PREENCHIMENTO: "Em preenchimento",
+      RESPONDIDO: "Respondido",
+      REVOGADO: "Revogado",
+    };
+    return labels[String(status || "").toUpperCase()] || status || "—";
+  }
+
+  function formatarDataAplicacao(value) {
+    if (!value) return "—";
+    const data = new Date(value);
+    return Number.isNaN(data.getTime()) ? "—" : data.toLocaleDateString("pt-BR");
+  }
+
+  function encontrarAplicacaoDiagnostico(id) {
+    return state.aplicacoesDiagnostico.find(a => String(a.id) === String(id)) || null;
+  }
+
+  function openAplicacaoDiagnostico(aplicacao) {
+    if (!aplicacao) return;
+    $("aplicacaoDetalheContato").textContent = aplicacao.contato_nome || "Contato";
+    $("aplicacaoDetalheFormulario").textContent =
+      `${aplicacao.formulario_nome || "Formulário"}${aplicacao.formulario_versao ? ` · v${aplicacao.formulario_versao}` : ""}`;
+    $("aplicacaoDetalheStatus").textContent = aplicacaoStatusLabel(aplicacao.status);
+    $("aplicacaoDetalheData").textContent = formatarDataAplicacao(aplicacao.created_at);
+
+    const acesso = $("aplicacaoDetalheAcesso");
+    const gerar = $("aplicacaoDetalheGerarAcesso");
+    const revogar = $("aplicacaoDetalheRevogarAcesso");
+    const linkBox = $("aplicacaoDetalheLinkBox");
+    const copiar = $("aplicacaoDetalheCopiarLink");
+    const abrirLink = $("aplicacaoDetalheAbrirLink");
+    linkBox.classList.add("hidden");
+    copiar.classList.add("hidden");
+    abrirLink.classList.add("hidden");
+    $("aplicacaoDetalheLink").value = "";
+
+    if (!aplicacao.acesso_gerado) acesso.textContent = "Ainda não gerado.";
+    else if (aplicacao.token_revogado_em) acesso.textContent = "Revogado.";
+    else if (aplicacao.acesso_expirado) acesso.textContent = `Expirado em ${formatarDataAplicacao(aplicacao.token_expira_em)}.`;
+    else acesso.textContent = `Ativo até ${formatarDataAplicacao(aplicacao.token_expira_em)}.`;
+
+    gerar.textContent = aplicacao.acesso_gerado ? "Gerar novo link" : "Gerar acesso público";
+    gerar.classList.toggle("hidden", String(aplicacao.status || "").toUpperCase() === "RESPONDIDO");
+    revogar.classList.toggle("hidden", !aplicacao.acesso_gerado || !!aplicacao.token_revogado_em || !!aplicacao.acesso_expirado);
+
+    gerar.onclick = async () => {
+      gerar.disabled = true;
+      try {
+        const resultado = await request(`/api/diagnostico/aplicacoes/${aplicacao.id}/acesso`, {
+          method:"POST", body:JSON.stringify({dias_validade:7})
+        });
+        const url = new URL(resultado.caminho_publico, window.location.origin).toString();
+        $("aplicacaoDetalheLink").value = url;
+        linkBox.classList.remove("hidden");
+        copiar.classList.remove("hidden");
+        abrirLink.classList.remove("hidden");
+        acesso.textContent = `Ativo até ${formatarDataAplicacao(resultado.token_expira_em)}.`;
+        aplicacao.acesso_gerado = true;
+        aplicacao.token_expira_em = resultado.token_expira_em;
+        aplicacao.token_revogado_em = null;
+        aplicacao.acesso_expirado = false;
+        gerar.textContent = "Gerar novo link";
+        revogar.classList.remove("hidden");
+        copiar.onclick = async () => { await navigator.clipboard.writeText(url); showMessage("Link copiado.", "info"); };
+        abrirLink.onclick = () => window.open(url, "_blank", "noopener");
+        showMessage("Acesso público gerado por 7 dias.", "info");
+      } catch (e) { showMessage(e.message); }
+      finally { gerar.disabled = false; }
+    };
+
+    revogar.onclick = async () => {
+      revogar.disabled = true;
+      try {
+        const atualizado = await request(`/api/diagnostico/aplicacoes/${aplicacao.id}/revogar-acesso`, {method:"POST"});
+        Object.assign(aplicacao, atualizado);
+        acesso.textContent = "Revogado.";
+        revogar.classList.add("hidden");
+        linkBox.classList.add("hidden");
+        copiar.classList.add("hidden");
+        abrirLink.classList.add("hidden");
+        showMessage("Acesso público revogado.", "info");
+      } catch (e) { showMessage(e.message); }
+      finally { revogar.disabled = false; }
+    };
+
+    const abrirContato = $("aplicacaoDetalheAbrirContato");
+    const contatoJaAberto = $("dlgContato").open &&
+      String($("contatoId").value || "") === String(aplicacao.contato_id || "");
+    abrirContato.classList.toggle("hidden", !aplicacao.contato_id || contatoJaAberto);
+    abrirContato.onclick = (!aplicacao.contato_id || contatoJaAberto) ? null : () => {
+      $("dlgAplicacaoDiagnostico").close();
+      openContato(aplicacao.contato_id);
+    };
+
+    $("dlgAplicacaoDiagnostico").showModal();
+  }
+
+  async function loadAplicacoesDiagnostico() {
+    try {
+      state.aplicacoesDiagnostico = await request("/api/diagnostico/aplicacoes");
+      renderAplicacoesDiagnostico();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  function renderAplicacoesDiagnostico() {
+    const busca = $("buscaAplicacaoDiagnostico").value.trim().toLowerCase();
+    const status = $("filtroAplicacaoStatus").value;
+    const list = state.aplicacoesDiagnostico.filter(a => {
+      const texto = `${a.contato_nome || ""} ${a.formulario_nome || ""} ${a.formulario_codigo || ""}`.toLowerCase();
+      return (!busca || texto.includes(busca)) && (!status || String(a.status).toUpperCase() === status);
+    });
+    $("listaAplicacoesDiagnostico").innerHTML = list.length ? list.map(a => `
+      <article class="admin-item entity-item">
+        <div class="entity-icon">◇</div>
+        <div>
+          <h3>${esc(a.contato_nome || "Contato")}</h3>
+          <p>${esc(a.formulario_nome || "Formulário")}${a.formulario_versao ? ` • versão ${esc(a.formulario_versao)}` : ""}</p>
+          <div class="admin-tags">
+            <span class="admin-tag eval">${esc(aplicacaoStatusLabel(a.status))}</span>
+            <span class="admin-tag">Atribuído em ${esc(formatarDataAplicacao(a.created_at))}</span>
+          </div>
+        </div>
+        <div class="admin-item-actions">
+          ${a.contato_id ? `<button type="button" data-aplicacao-contato="${a.contato_id}">Abrir contato</button>` : ""}
+          <button type="button" data-ver-aplicacao="${a.id}">Ver aplicação</button>
+        </div>
+      </article>`).join("") : `<div class="admin-empty">Nenhuma aplicação encontrada.</div>`;
+    $$('[data-aplicacao-contato]').forEach(b => b.onclick = () => openContato(b.dataset.aplicacaoContato));
+    $$('[data-ver-aplicacao]', $("listaAplicacoesDiagnostico")).forEach(
+      b => b.onclick = () => openAplicacaoDiagnostico(encontrarAplicacaoDiagnostico(b.dataset.verAplicacao))
+    );
+  }
+
+  async function loadAplicacoesDoContato(contatoId) {
+    try {
+      const aplicacoes = await request(`/api/diagnostico/aplicacoes${qs({contato_id:contatoId})}`);
+      $("contatoDiagnosticoResumo").textContent = aplicacoes.length
+        ? `${aplicacoes.length} aplicação(ões) vinculada(s) a este contato.`
+        : "Solicitação recebida, mas nenhum formulário foi atribuído.";
+      aplicacoes.forEach(a => {
+        const pos = state.aplicacoesDiagnostico.findIndex(item => String(item.id) === String(a.id));
+        if (pos >= 0) state.aplicacoesDiagnostico[pos] = a;
+        else state.aplicacoesDiagnostico.push(a);
+      });
+      $("contatoDiagnosticoLista").innerHTML = aplicacoes.map(a => `
+        <article class="admin-item entity-item">
+          <div class="entity-icon">◇</div>
+          <div>
+            <h3>${esc(a.formulario_nome || "Formulário")}${a.formulario_versao ? ` · v${esc(a.formulario_versao)}` : ""}</h3>
+            <div class="admin-tags">
+              <span class="admin-tag eval">${esc(aplicacaoStatusLabel(a.status))}</span>
+              <span class="admin-tag">${esc(formatarDataAplicacao(a.created_at))}</span>
+            </div>
+          </div>
+          <div class="admin-item-actions">
+            <button type="button" data-ver-aplicacao="${a.id}">Ver aplicação</button>
+          </div>
+        </article>`).join("");
+      $$('[data-ver-aplicacao]', $("contatoDiagnosticoLista")).forEach(
+        b => b.onclick = () => openAplicacaoDiagnostico(encontrarAplicacaoDiagnostico(b.dataset.verAplicacao))
+      );
+    } catch (e) {
+      $("contatoDiagnosticoResumo").textContent = "Não foi possível carregar as aplicações deste contato.";
+      $("contatoDiagnosticoLista").innerHTML = "";
+      showMessage(e.message);
+    }
+  }
+
+  async function openAtribuirFormulario(contatoId = null) {
+    try {
+      const [contatos, formularios] = await Promise.all([
+        request("/api/admin/contatos"),
+        request("/api/diagnostico/formularios?ativo=true"),
+      ]);
+      $("aplicacaoContato").innerHTML = contatos.length
+        ? contatos.map(c => `<option value="${c.id}">${esc(c.nome)}${c.email ? ` • ${esc(c.email)}` : ""}</option>`).join("")
+        : `<option value="">Nenhum contato disponível</option>`;
+      $("aplicacaoFormulario").innerHTML = formularios.length
+        ? formularios.map(f => `<option value="${f.id}">${esc(f.nome)} · v${esc(f.versao)}</option>`).join("")
+        : `<option value="">Nenhum formulário ativo</option>`;
+      if (contatoId) $("aplicacaoContato").value = contatoId;
+      $("dlgAtribuirFormulario").showModal();
+    } catch (e) { showMessage(e.message); }
+  }
+
+  $("novaAplicacaoDiagnostico").addEventListener("click", () => openAtribuirFormulario());
+  $("atribuirFormularioContato").addEventListener("click", () => openAtribuirFormulario($("contatoId").value || null));
+  $("buscaAplicacaoDiagnostico").addEventListener("input", renderAplicacoesDiagnostico);
+  $("filtroAplicacaoStatus").addEventListener("change", renderAplicacoesDiagnostico);
+  $("contatoTipo").addEventListener("change", () => {
+    const id = $("contatoId").value;
+    $("contatoDiagnostico").classList.toggle("hidden", !id || $("contatoTipo").value !== "DIAGNOSTICO");
+  });
+  $("formAtribuirFormulario").addEventListener("submit", async event => {
+    event.preventDefault();
+    const contato_id = $("aplicacaoContato").value;
+    const formulario_id = $("aplicacaoFormulario").value;
+    if (!contato_id || !formulario_id) return showMessage("Selecione o contato e o formulário.");
+    try {
+      await request("/api/diagnostico/aplicacoes", {
+        method: "POST",
+        body: JSON.stringify({contato_id, formulario_id}),
+      });
+      $("dlgAtribuirFormulario").close();
+      if ($("dlgContato").open && String($("contatoId").value) === String(contato_id)) await loadAplicacoesDoContato(contato_id);
+      if (state.adminView === "aplicacoesDiagnostico") await loadAplicacoesDiagnostico();
+      showMessage("Formulário atribuído ao contato.", "info");
+    } catch (e) { showMessage(e.message); }
   });
 
   async function loadCategorias() {

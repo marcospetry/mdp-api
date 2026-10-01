@@ -156,6 +156,9 @@ class Diagnostico(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     contato_id = Column(UUID(as_uuid=True), ForeignKey("contatos.id"), nullable=True)
     formulario_id = Column(UUID(as_uuid=True), ForeignKey("formularios_diagnostico.id"), nullable=True)
+    token_hash = Column(String(64), nullable=True)
+    token_expira_em = Column(DateTime(timezone=True), nullable=True)
+    token_revogado_em = Column(DateTime(timezone=True), nullable=True)
 
 
 class RespostaDiagnostico(Base):
