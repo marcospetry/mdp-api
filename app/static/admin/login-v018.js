@@ -2026,7 +2026,7 @@
       $("perguntaSugestao").value=p?.sugestao||"";
       $("perguntaAtiva").checked=p?.ativo ?? true;
       $("listaOpcoes").innerHTML=""; $("listaFaixas").innerHTML="";
-      (p ? (p.opcoes || []) : OPCOES_PADRAO).forEach(addOptionRow);
+      (p ? (p.opcoes || []) : []).forEach(addOptionRow);
       (p?.faixas||[]).forEach(addRangeRow);
       $("tituloPergunta").textContent=p?"Editar pergunta":"Nova pergunta";
       syncPerguntaUI();
