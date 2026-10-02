@@ -80,24 +80,66 @@
     el.className = "message hidden";
   }
 
-  async function request(path, options = {}) {
+  let refreshPromise = null;
+
+  async function refreshAccessToken() {
+    if (!state.refreshToken) return false;
+    if (refreshPromise) return refreshPromise;
+
+    refreshPromise = (async () => {
+      try {
+        const response = await fetch("/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: state.refreshToken })
+        });
+        if (!response.ok) return false;
+        const body = await response.json();
+        if (!body?.access_token || !body?.refresh_token) return false;
+        state.accessToken = body.access_token;
+        state.refreshToken = body.refresh_token;
+        return true;
+      } catch (_) {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+
+    return refreshPromise;
+  }
+
+  function expireAdminSession() {
+    state.accessToken = null;
+    state.refreshToken = null;
+    document.body.classList.remove("admin-authenticated");
+    showStep("loginStep");
+  }
+
+  async function request(path, options = {}, allowRefresh = true) {
     const headers = { ...(options.headers || {}) };
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
     if (state.accessToken) headers.Authorization = `Bearer ${state.accessToken}`;
 
-    const response = await fetch(path, { ...options, headers });
+    let response = await fetch(path, { ...options, headers });
+
+    if (response.status === 401 && state.accessToken && state.refreshToken && allowRefresh) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        const retryHeaders = { ...(options.headers || {}) };
+        if (options.body !== undefined) retryHeaders["Content-Type"] = "application/json";
+        retryHeaders.Authorization = `Bearer ${state.accessToken}`;
+        response = await fetch(path, { ...options, headers: retryHeaders });
+      }
+    }
+
     let body = null;
     if (response.status !== 204) {
       try { body = await response.json(); } catch (_) {}
     }
 
     if (!response.ok) {
-      if (response.status === 401 && state.accessToken) {
-        state.accessToken = null;
-        state.refreshToken = null;
-        document.body.classList.remove("admin-authenticated");
-        showStep("loginStep");
-      }
+      if (response.status === 401 && state.accessToken) expireAdminSession();
       let detail = body?.detail || `Falha HTTP ${response.status}`;
       if (Array.isArray(detail)) detail = detail.map(x => x.msg || JSON.stringify(x)).join(" | ");
       const error = new Error(detail);
@@ -1692,7 +1734,100 @@
       openContato(aplicacao.contato_id);
     };
 
+    const verRespostas = $("aplicacaoDetalheVerRespostas");
+    verRespostas.onclick = () => {
+      $("dlgAplicacaoDiagnostico").close();
+      openRespostasAplicacao(aplicacao);
+    };
+
     $("dlgAplicacaoDiagnostico").showModal();
+  }
+
+  function formatarNumeroDiagnostico(value) {
+    if (value === null || value === undefined || value === "") return "—";
+    const numero = Number(value);
+    return Number.isFinite(numero) ? numero.toLocaleString("pt-BR", {maximumFractionDigits:4}) : String(value);
+  }
+
+  function renderOpcoesResposta(pergunta) {
+    if (!pergunta.opcoes?.length) return "";
+    const multipla = String(pergunta.tipo_resposta || "").toUpperCase() === "MULTIPLA_ESCOLHA";
+    return `<div class="diagnostico-opcoes">${pergunta.opcoes.map(opcao => `
+      <div class="diagnostico-opcao ${opcao.selecionada ? "selecionada" : ""}">
+        <span class="diagnostico-marcador">${multipla ? (opcao.selecionada ? "☑" : "☐") : (opcao.selecionada ? "●" : "○")}</span>
+        <span class="diagnostico-opcao-rotulo">${esc(opcao.rotulo)}</span>
+        ${opcao.estado_interno ? `<span class="admin-tag">${esc(opcao.estado_interno)}</span>` : ""}
+        ${opcao.selecionada ? `<span class="admin-tag eval">Resposta</span>` : ""}
+      </div>`).join("")}</div>`;
+  }
+
+  function renderFaixasResposta(pergunta) {
+    if (!pergunta.faixas?.length) return "";
+    const faixaLabel = faixa => {
+      if (faixa.valor_min == null) return `Até ${formatarNumeroDiagnostico(faixa.valor_max)}`;
+      if (faixa.valor_max == null) return `A partir de ${formatarNumeroDiagnostico(faixa.valor_min)}`;
+      return `${formatarNumeroDiagnostico(faixa.valor_min)} a ${formatarNumeroDiagnostico(faixa.valor_max)}`;
+    };
+    return `<div class="diagnostico-faixas"><div class="diagnostico-contexto-label">Faixas configuradas</div>${pergunta.faixas.map(faixa => `
+      <div class="diagnostico-opcao ${faixa.correspondente ? "selecionada" : ""}">
+        <span class="diagnostico-marcador">${faixa.correspondente ? "●" : "○"}</span>
+        <span class="diagnostico-opcao-rotulo">${esc(faixaLabel(faixa))}</span>
+        <span class="admin-tag">${esc(faixa.estado_interno)}</span>
+        ${faixa.correspondente ? `<span class="admin-tag eval">Resposta</span>` : ""}
+      </div>`).join("")}</div>`;
+  }
+
+  function renderPerguntaResposta(pergunta) {
+    const tipo = String(pergunta.tipo_resposta || "").toUpperCase();
+    let corpo = "";
+    if (tipo === "ESCOLHA_UNICA" || tipo === "MULTIPLA_ESCOLHA") corpo = renderOpcoesResposta(pergunta);
+    else if (tipo === "NUMERO") corpo = `
+      <div class="diagnostico-resposta-direta"><strong>Resposta:</strong> ${pergunta.respondida ? esc(formatarNumeroDiagnostico(pergunta.resposta_numero)) : "Não respondida"}</div>
+      ${renderFaixasResposta(pergunta)}`;
+    else corpo = `<div class="diagnostico-resposta-direta"><strong>Resposta:</strong><div class="diagnostico-texto-resposta">${pergunta.respondida ? esc(pergunta.resposta_texto || "") : "Não respondida"}</div></div>`;
+
+    return `<article class="diagnostico-pergunta ${pergunta.respondida ? "" : "nao-respondida"}">
+      <div class="diagnostico-pergunta-head">
+        <div><strong>${esc(pergunta.codigo || "Pergunta")}</strong> — ${esc(pergunta.pergunta)}</div>
+        <div class="admin-tags"><span class="admin-tag">${esc(pergunta.natureza || "CONTEXTO")}</span>${pergunta.obrigatoria ? `<span class="admin-tag">Obrigatória</span>` : ""}</div>
+      </div>
+      ${corpo}
+    </article>`;
+  }
+
+  async function openRespostasAplicacao(aplicacao) {
+    if (!aplicacao) return;
+    const dlg = $("dlgRespostasAplicacao");
+    $("respostasAplicacaoResumo").textContent = "Carregando respostas...";
+    $("respostasAplicacaoConteudo").innerHTML = "";
+    dlg.showModal();
+    try {
+      const dados = await request(`/api/diagnostico/aplicacoes/${aplicacao.id}/respostas`);
+      $("respostasAplicacaoResumo").innerHTML = `
+        <strong>${esc(dados.contato_nome || "Contato")}</strong><br>
+        ${esc(dados.formulario_nome || "Formulário")}${dados.formulario_versao ? ` · v${esc(dados.formulario_versao)}` : ""}<br>
+        Situação: <strong>${esc(aplicacaoStatusLabel(dados.status))}</strong> · Progresso: <strong>${esc(dados.respondidas)} de ${esc(dados.aplicaveis)}</strong> perguntas aplicáveis${dados.concluido_em ? ` · Concluído em ${esc(formatarDataAplicacao(dados.concluido_em))}` : ""}`;
+
+      const aplicaveis = (dados.perguntas || []).filter(p => p.aplicavel);
+      const grupos = [];
+      aplicaveis.forEach(pergunta => {
+        let grupo = grupos.find(g => String(g.id) === String(pergunta.categoria_id));
+        if (!grupo) {
+          grupo = {id: pergunta.categoria_id, nome: pergunta.categoria_nome, perguntas: []};
+          grupos.push(grupo);
+        }
+        grupo.perguntas.push(pergunta);
+      });
+      $("respostasAplicacaoConteudo").innerHTML = grupos.length ? grupos.map(grupo => `
+        <section class="diagnostico-categoria-respostas">
+          <h4>${esc(grupo.nome)}</h4>
+          ${grupo.perguntas.map(renderPerguntaResposta).join("")}
+        </section>`).join("") : `<div class="admin-empty">Esta aplicação ainda não possui perguntas aplicáveis para exibição.</div>`;
+    } catch (e) {
+      $("respostasAplicacaoResumo").textContent = "Não foi possível carregar as respostas.";
+      $("respostasAplicacaoConteudo").innerHTML = "";
+      showMessage(e.message);
+    }
   }
 
   async function loadAplicacoesDiagnostico() {
@@ -2093,6 +2228,14 @@
     e.preventDefault();
     const id=$("perguntaId").value, tipo=$("perguntaTipo").value, natureza=$("perguntaNatureza").value;
     const options=collectOptions(), ranges=collectRanges();
+    if(!$("perguntaCategoria").value) return showMessage("Selecione a categoria da pergunta.");
+    if(!$("perguntaTexto").value.trim()) return showMessage("Informe o texto da pergunta.");
+    if(natureza==="AVALIATIVA" && !$("perguntaIdeal").value.trim()) return showMessage("Informe o cenário ideal da pergunta avaliativa.");
+    if(natureza==="AVALIATIVA" && !$("perguntaSugestao").value.trim()) return showMessage("Informe a recomendação padrão da pergunta avaliativa.");
+    if(["ESCOLHA_UNICA","MULTIPLA_ESCOLHA"].includes(tipo)){
+      const opcoesAtivas=options.filter(x=>!x.deleted);
+      if(opcoesAtivas.some(x=>!x.rotulo || !x.valor)) return showMessage("Preencha o texto exibido e o valor interno de todas as opções ativas.");
+    }
     if(tipo==="ESCOLHA_UNICA" && natureza==="AVALIATIVA" && options.filter(x=>!x.deleted).some(x=>!x.estado_interno)){
       return showMessage("Toda opção de uma pergunta avaliativa precisa de interpretação.");
     }

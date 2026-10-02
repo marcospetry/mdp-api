@@ -543,3 +543,23 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .tenant-inline-action{display:flex;align-items:flex-end;padding-bottom:1px}
 
 .tenant-func-global-off{opacity:.72}.tenant-func-global-off .admin-item-actions button:disabled{opacity:.55;cursor:not-allowed}
+
+/* Diagnóstico 3B: leitura contextual das respostas da aplicação */
+.diagnostico-respostas-wrap{padding:20px}.diagnostico-respostas{display:flex;flex-direction:column;gap:18px;margin-top:16px}.diagnostico-categoria-respostas{border:1px solid var(--line);border-radius:10px;overflow:hidden}.diagnostico-categoria-respostas h4{margin:0;padding:12px 14px;background:#102536;border-bottom:1px solid var(--line);font-size:15px}.diagnostico-pergunta{padding:14px;border-bottom:1px solid var(--line-soft)}.diagnostico-pergunta:last-child{border-bottom:0}.diagnostico-pergunta.nao-respondida{opacity:.72}.diagnostico-pergunta-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:10px}.diagnostico-opcoes,.diagnostico-faixas{display:flex;flex-direction:column;gap:6px}.diagnostico-opcao{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line-soft);border-radius:8px;background:var(--panel-deep)}.diagnostico-opcao.selecionada{border-color:#56b8ff;background:#102f45}.diagnostico-marcador{width:18px;text-align:center;font-size:16px}.diagnostico-opcao-rotulo{flex:1}.diagnostico-resposta-direta{padding:10px;border:1px solid var(--line-soft);border-radius:8px;background:var(--panel-deep)}.diagnostico-texto-resposta{margin-top:7px;white-space:pre-wrap;color:var(--text)}.diagnostico-contexto-label{margin:10px 0 6px;color:var(--muted);font-size:12px;font-weight:700}@media(max-width:700px){.diagnostico-pergunta-head{flex-direction:column}.diagnostico-opcao{align-items:flex-start;flex-wrap:wrap}}
+
+
+/* Aplicação de diagnóstico: espaço para ações sem cortar botões. */
+#dlgAplicacaoDiagnostico.aplicacao-diagnostico-dialog{
+  width:min(780px,96vw);
+}
+#dlgAplicacaoDiagnostico .dialog-actions{
+  flex-wrap:wrap;
+}
+#dlgAplicacaoDiagnostico .dialog-actions > button{
+  flex:0 0 auto;
+}
+@media (max-width:700px){
+  #dlgAplicacaoDiagnostico .dialog-actions > button{
+    flex:1 1 150px;
+  }
+}

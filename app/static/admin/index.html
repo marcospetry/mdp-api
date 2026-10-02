@@ -884,7 +884,7 @@
             </form>
           </dialog>
 
-          <dialog id="dlgAplicacaoDiagnostico" class="admin-dialog">
+          <dialog id="dlgAplicacaoDiagnostico" class="admin-dialog aplicacao-diagnostico-dialog">
             <form method="dialog">
               <div class="dialog-head">
                 <div><h3>Aplicação de diagnóstico</h3><p>Detalhes da atribuição do formulário ao contato.</p></div>
@@ -900,6 +900,7 @@
                 <input id="aplicacaoDetalheLink" type="text" readonly style="width:100%;margin-top:8px">
               </div>
               <div class="dialog-actions">
+                <button type="button" id="aplicacaoDetalheVerRespostas" class="admin-secondary">Ver respostas</button>
                 <button type="button" id="aplicacaoDetalheAbrirContato" class="admin-secondary">Abrir contato</button>
                 <button type="button" id="aplicacaoDetalheGerarAcesso" class="admin-secondary">Gerar acesso público</button>
                 <button type="button" id="aplicacaoDetalheCopiarLink" class="admin-secondary hidden">Copiar link</button>
@@ -908,6 +909,20 @@
                 <button type="button" class="admin-primary" data-close="dlgAplicacaoDiagnostico">Fechar</button>
               </div>
             </form>
+          </dialog>
+
+          <dialog id="dlgRespostasAplicacao" class="admin-dialog wide">
+            <div class="diagnostico-respostas-wrap">
+              <div class="dialog-head">
+                <div><h3>Respostas da aplicação</h3><p>Visualização contextual e somente leitura do formulário atribuído.</p></div>
+                <button type="button" class="dialog-close" data-close="dlgRespostasAplicacao">×</button>
+              </div>
+              <div id="respostasAplicacaoResumo" class="admin-note">Carregando...</div>
+              <div id="respostasAplicacaoConteudo" class="diagnostico-respostas"></div>
+              <div class="dialog-actions">
+                <button type="button" class="admin-primary" data-close="dlgRespostasAplicacao">Fechar</button>
+              </div>
+            </div>
           </dialog>
 
           <dialog id="dlgClonarFormulario" class="admin-dialog">
@@ -1125,7 +1140,7 @@
           </dialog>
 
           <dialog id="dlgPergunta" class="admin-dialog wide">
-            <form id="formPergunta">
+            <form id="formPergunta" novalidate>
               <div class="dialog-head">
                 <div><h3 id="tituloPergunta">Nova pergunta</h3><p>Configure a pergunta, suas respostas e a interpretação pelo motor.</p></div>
                 <button type="button" class="dialog-close" data-close="dlgPergunta">×</button>
