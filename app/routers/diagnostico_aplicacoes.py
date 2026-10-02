@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.models.contato import Contato
-from app.models.diagnostico import Diagnostico, FormularioDiagnostico, FormularioPergunta
+from app.models.diagnostico import Diagnostico, FormularioDiagnostico, FormularioPergunta, RespostaDiagnostico
 from app.models.empresa import Empresa
 from app.schemas.diagnostico_aplicacao import (
     AplicacaoAcessoCreate,
@@ -177,7 +177,10 @@ def gerar_acesso_publico(
     aplicacao.token_expira_em = datetime.now(timezone.utc) + timedelta(days=dados.dias_validade)
     aplicacao.token_revogado_em = None
     if _status_normalizado(aplicacao.status) == "REVOGADO":
-        aplicacao.status = "AGUARDANDO_RESPOSTA"
+        possui_respostas = db.query(RespostaDiagnostico.id).filter(
+            RespostaDiagnostico.diagnostico_id == aplicacao.id
+        ).first() is not None
+        aplicacao.status = "EM_PREENCHIMENTO" if possui_respostas else "AGUARDANDO_RESPOSTA"
     db.commit()
     db.refresh(aplicacao)
     return AplicacaoAcessoGeradoResponse(
@@ -201,7 +204,6 @@ def revogar_acesso_publico(
     if not aplicacao.token_hash:
         raise HTTPException(status_code=409, detail="Esta aplicação ainda não possui acesso público.")
     aplicacao.token_revogado_em = datetime.now(timezone.utc)
-    aplicacao.status = "REVOGADO"
     db.commit()
     db.refresh(aplicacao)
     return _response(db, aplicacao)

@@ -1167,7 +1167,8 @@
               <fieldset id="blocoOpcoes">
                 <legend>3. Opções de resposta</legend>
                 <div class="fieldset-toolbar">
-                  <span>Arraste pelo símbolo ☰ para reordenar.</span>
+                  <span>As opções exibidas pertencem à pergunta. A ordem segue a sequência da lista.</span>
+                  <button type="button" id="addOpcoesPadrao" class="admin-secondary compact">+ Opções padrão</button>
                   <button type="button" id="addOpcao" class="admin-secondary compact">+ Adicionar opção</button>
                 </div>
                 <div id="listaOpcoes" class="options-list"></div>
@@ -1192,8 +1193,7 @@
           </dialog>
 
           <template id="tplOpcao">
-            <div class="option-row" draggable="true">
-              <div class="drag-handle">☰</div>
+            <div class="option-row">
               <div>
                 <label>Texto exibido<input class="opt-rotulo" maxlength="150" required></label>
                 <div class="admin-form-row">
@@ -1210,6 +1210,7 @@
                   </label>
                 </div>
               </div>
+              <span class="option-save-state"></span>
               <button type="button" class="dialog-close remove-option">×</button>
             </div>
           </template>

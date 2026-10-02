@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -37,3 +38,22 @@ class AplicacaoDiagnosticoResponse(BaseModel):
     token_expira_em: datetime | None = None
     token_revogado_em: datetime | None = None
     acesso_expirado: bool = False
+
+
+class RespostaPublicaInput(BaseModel):
+    pergunta_id: UUID
+    opcao_id: UUID | None = None
+    opcoes_ids: list[UUID] = Field(default_factory=list)
+    resposta_texto: str | None = None
+    resposta_numero: Decimal | None = None
+
+
+class PreenchimentoPublicoInput(BaseModel):
+    respostas: list[RespostaPublicaInput] = Field(default_factory=list)
+
+
+class PreenchimentoPublicoResponse(BaseModel):
+    status: str
+    respondidas: int
+    aplicaveis: int
+    concluido_em: datetime | None = None

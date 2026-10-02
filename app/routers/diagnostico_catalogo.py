@@ -13,6 +13,7 @@ from app.models.diagnostico import (
     OpcaoPerguntaDiagnostico,
     PerguntaDiagnostico,
     RespostaDiagnostico,
+    RegraExibicaoPergunta,
 )
 from app.schemas.diagnostico import (
     CategoriaCreate,
@@ -83,7 +84,10 @@ def _detalhe_pergunta(db: Session, pergunta: PerguntaDiagnostico) -> PerguntaDet
     categoria = _categoria_ou_404(db, pergunta.categoria_id)
     opcoes = (
         db.query(OpcaoPerguntaDiagnostico)
-        .filter(OpcaoPerguntaDiagnostico.pergunta_id == pergunta.id)
+        .filter(
+            OpcaoPerguntaDiagnostico.pergunta_id == pergunta.id,
+            OpcaoPerguntaDiagnostico.ativo.is_(True),
+        )
         .order_by(OpcaoPerguntaDiagnostico.ordem, OpcaoPerguntaDiagnostico.rotulo)
         .all()
     )
@@ -317,10 +321,14 @@ def atualizar_pergunta(pergunta_id: UUID, dados: PerguntaUpdate, db: Session = D
     if natureza_final == "AVALIATIVA" and (not ideal_final or not str(ideal_final).strip() or not sugestao_final or not str(sugestao_final).strip()):
         raise HTTPException(status_code=400, detail="Pergunta AVALIATIVA exige ideal e sugestao.")
 
-    opcoes_existentes = db.query(OpcaoPerguntaDiagnostico).filter(OpcaoPerguntaDiagnostico.pergunta_id == pergunta_id).count()
+    opcoes_existentes = db.query(OpcaoPerguntaDiagnostico).filter(
+        OpcaoPerguntaDiagnostico.pergunta_id == pergunta_id,
+        OpcaoPerguntaDiagnostico.ativo.is_(True),
+    ).count()
     faixas_existentes = db.query(FaixaAvaliacaoNumero).filter(FaixaAvaliacaoNumero.pergunta_id == pergunta_id).count()
     estados_em_opcoes = db.query(OpcaoPerguntaDiagnostico).filter(
         OpcaoPerguntaDiagnostico.pergunta_id == pergunta_id,
+        OpcaoPerguntaDiagnostico.ativo.is_(True),
         OpcaoPerguntaDiagnostico.estado_interno.is_not(None),
     ).count()
 
@@ -403,11 +411,25 @@ def atualizar_opcao(opcao_id: UUID, dados: OpcaoUpdate, db: Session = Depends(ge
     return opcao
 
 
-@router.delete("/opcoes/{opcao_id}", response_model=OpcaoResponse)
-def desativar_opcao(opcao_id: UUID, db: Session = Depends(get_db)):
+@router.delete("/opcoes/{opcao_id}", status_code=status.HTTP_204_NO_CONTENT)
+def excluir_opcao(opcao_id: UUID, db: Session = Depends(get_db)):
     opcao = _opcao_ou_404(db, opcao_id)
     _validar_pergunta_editavel(db, opcao.pergunta_id)
-    opcao.ativo = False
-    db.commit()
-    db.refresh(opcao)
-    return opcao
+
+    regra = (
+        db.query(RegraExibicaoPergunta.id)
+        .filter(RegraExibicaoPergunta.opcao_origem_id == opcao_id)
+        .first()
+    )
+    if regra:
+        raise HTTPException(
+            status_code=409,
+            detail="Esta opção é usada em uma regra de exibição. Remova a regra antes de excluir a opção.",
+        )
+
+    db.delete(opcao)
+    try:
+        db.commit()
+    except (IntegrityError, DBAPIError) as exc:
+        _rollback_http(db, exc)
+    return None

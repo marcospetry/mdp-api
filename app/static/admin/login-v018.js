@@ -1952,27 +1952,36 @@
     } catch(e){showMessage(e.message)}
   }
 
+  const OPCOES_PADRAO = [
+    {valor:"SIM",rotulo:"Tenho e atende adequadamente",estado_interno:"ALTO"},
+    {valor:"PARCIAL",rotulo:"Tenho, mas atende em partes",estado_interno:"MEDIO"},
+    {valor:"NAO",rotulo:"Não tenho / não atende",estado_interno:"BAIXO"},
+    {valor:"NA",rotulo:"Não se aplica ao meu negócio",estado_interno:"NA"},
+    {valor:"NAO_SEI",rotulo:"Não sei informar",estado_interno:"NAO_SEI"}
+  ];
+
+  function addOpcoesPadraoAusentes() {
+    const existentes = new Set(
+      $$("#listaOpcoes .option-row")
+        .filter(row=>row.dataset.deleted!=="true")
+        .map(row=>row.querySelector(".opt-valor").value.trim())
+    );
+    OPCOES_PADRAO.filter(o=>!existentes.has(o.valor)).forEach(addOptionRow);
+    syncPerguntaUI();
+  }
+
   function addOptionRow(o={}) {
     const row = $("tplOpcao").content.firstElementChild.cloneNode(true);
     row.dataset.id = o.id || "";
     row.querySelector(".opt-rotulo").value = o.rotulo || "";
     row.querySelector(".opt-valor").value = o.valor || "";
     row.querySelector(".opt-estado").value = o.estado_interno || "";
+    const saveState=row.querySelector(".option-save-state");
+    if(saveState) saveState.textContent=o.id ? "Salva" : "Nova";
     row.querySelector(".remove-option").onclick = () => {
       if (row.dataset.id) row.dataset.deleted = "true";
       row.classList.add("hidden");
     };
-    row.addEventListener("dragstart",()=>row.classList.add("dragging"));
-    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
-    row.addEventListener("dragover",e=>{e.preventDefault();row.classList.add("drag-over")});
-    row.addEventListener("dragleave",()=>row.classList.remove("drag-over"));
-    row.addEventListener("drop",e=>{
-      e.preventDefault(); row.classList.remove("drag-over");
-      const dragging = document.querySelector(".option-row.dragging");
-      if (!dragging || dragging===row) return;
-      const rect=row.getBoundingClientRect();
-      $("listaOpcoes").insertBefore(dragging,e.clientY < rect.top+rect.height/2 ? row : row.nextSibling);
-    });
     $("listaOpcoes").appendChild(row);
   }
 
@@ -2017,18 +2026,12 @@
       $("perguntaSugestao").value=p?.sugestao||"";
       $("perguntaAtiva").checked=p?.ativo ?? true;
       $("listaOpcoes").innerHTML=""; $("listaFaixas").innerHTML="";
-      (p?.opcoes || [
-        {valor:"SIM",rotulo:"Tenho e atende adequadamente",estado_interno:"ALTO"},
-        {valor:"PARCIAL",rotulo:"Tenho, mas atende em partes",estado_interno:"MEDIO"},
-        {valor:"NAO",rotulo:"Não tenho / não atende",estado_interno:"BAIXO"},
-        {valor:"NA",rotulo:"Não se aplica ao meu negócio",estado_interno:"NA"},
-        {valor:"NAO_SEI",rotulo:"Não sei informar",estado_interno:"NAO_SEI"}
-      ]).forEach(addOptionRow);
+      (p ? (p.opcoes || []) : OPCOES_PADRAO).forEach(addOptionRow);
       (p?.faixas||[]).forEach(addRangeRow);
       $("tituloPergunta").textContent=p?"Editar pergunta":"Nova pergunta";
       syncPerguntaUI();
       const congelada=!!p?.utilizada_em_resposta;
-      ["perguntaCodigo","perguntaCategoria","perguntaTexto","perguntaAjuda","perguntaTipo","perguntaNatureza","perguntaIdeal","perguntaSugestao","perguntaAtiva","addOpcao","addFaixa"]
+      ["perguntaCodigo","perguntaCategoria","perguntaTexto","perguntaAjuda","perguntaTipo","perguntaNatureza","perguntaIdeal","perguntaSugestao","perguntaAtiva","addOpcao","addOpcoesPadrao","addFaixa"]
         .forEach(cid=>{const el=$(cid); if(el) el.disabled=congelada;});
       $$("#listaOpcoes input,#listaOpcoes select,#listaOpcoes button,#listaFaixas input,#listaFaixas select,#listaFaixas button").forEach(el=>el.disabled=congelada);
       const sb=$("#formPergunta button[type='submit']");
@@ -2078,6 +2081,7 @@
 
   $("novaPergunta").onclick=()=>openPergunta();
   $("addOpcao").onclick=()=>{addOptionRow();syncPerguntaUI()};
+  $("addOpcoesPadrao").onclick=addOpcoesPadraoAusentes;
   $("addFaixa").onclick=()=>addRangeRow();
   $("perguntaTipo").onchange=syncPerguntaUI;
   $("perguntaNatureza").onchange=syncPerguntaUI;

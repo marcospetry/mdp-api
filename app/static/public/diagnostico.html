@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Diagnóstico MDP</title>
   <style>
-    body{font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a;margin:0}.wrap{max-width:760px;margin:40px auto;padding:0 16px}.card{background:#fff;border:1px solid #dfe5ea;border-radius:14px;padding:24px;margin-bottom:16px}.muted{color:#64748b}.question{border-top:1px solid #e5e7eb;padding-top:18px;margin-top:18px}.option{display:block;margin:9px 0}.error{color:#b42318}input[type=text],input[type=number],textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}button{padding:10px 16px;border:0;border-radius:8px;background:#1f4f78;color:#fff}button:disabled{opacity:.55}
+    body{font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a;margin:0}.wrap{max-width:760px;margin:40px auto;padding:0 16px}.card{background:#fff;border:1px solid #dfe5ea;border-radius:14px;padding:24px;margin-bottom:16px}.muted{color:#64748b}.question{border-top:1px solid #e5e7eb;padding-top:18px;margin-top:18px}.option{display:block;margin:9px 0}.error{color:#b42318}input[type=text],input[type=number],textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}button{padding:10px 16px;border:0;border-radius:8px;background:#1f4f78;color:#fff;cursor:pointer}button.secondary{background:#64748b}button:disabled{opacity:.55;cursor:default}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.status{margin-top:14px;padding:10px 12px;border-radius:8px;background:#eef4f8}.success{color:#166534}.help{font-size:.92em;color:#64748b;margin-top:-6px}
   </style>
 </head>
 <body><main class="wrap"><section class="card" id="app"><p>Carregando formulário...</p></section></main>
@@ -15,91 +15,153 @@
   const token=decodeURIComponent(location.pathname.split('/').pop()||'');
   const esc=v=>(v??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const respostas={};
+  let data=null;
+  let mensagem='';
+  let erro='';
+  let enviando=false;
 
-  try{
-    const r=await fetch(`/api/publico/diagnostico/${encodeURIComponent(token)}`);
-    const data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.detail||`Falha HTTP ${r.status}`);
+  function carregarRespostasSalvas(itens){
+    (itens||[]).forEach(item=>{
+      if(item.opcoes_ids?.length) respostas[item.pergunta_id]=item.opcoes_ids;
+      else if(item.opcao_id) respostas[item.pergunta_id]=item.opcao_id;
+      else if(item.resposta_numero!==undefined&&item.resposta_numero!==null) respostas[item.pergunta_id]=String(item.resposta_numero);
+      else if(item.resposta_texto!==undefined&&item.resposta_texto!==null) respostas[item.pergunta_id]=item.resposta_texto;
+    });
+  }
 
+  function visiveis(){
     const perguntas=data.perguntas||[];
     const regras=data.regras_exibicao||[];
     const destinos=new Set(regras.map(regra=>regra.pergunta_destino_id));
-
-    function visiveis(){
-      const visible=new Set();
-      perguntas.forEach(p=>{ if(!destinos.has(p.id)) visible.add(p.id); });
-
-      let changed=true;
-      while(changed){
-        changed=false;
-        [...visible].forEach(sourceId=>{
-          const answer=respostas[sourceId];
-          if(answer===undefined||answer===null) return;
-          const selected=Array.isArray(answer)?answer:[answer];
-          selected.forEach(optionId=>{
-            regras
-              .filter(regra=>regra.pergunta_origem_id===sourceId && regra.opcao_origem_id===optionId)
-              .forEach(regra=>{
-                if(!visible.has(regra.pergunta_destino_id)){
-                  visible.add(regra.pergunta_destino_id);
-                  changed=true;
-                }
-              });
-          });
+    const visible=new Set();
+    perguntas.forEach(p=>{ if(!destinos.has(p.id)) visible.add(p.id); });
+    let changed=true;
+    while(changed){
+      changed=false;
+      [...visible].forEach(sourceId=>{
+        const answer=respostas[sourceId];
+        if(answer===undefined||answer===null) return;
+        const selected=Array.isArray(answer)?answer:[answer];
+        selected.forEach(optionId=>{
+          regras
+            .filter(regra=>regra.pergunta_origem_id===sourceId && regra.opcao_origem_id===optionId)
+            .forEach(regra=>{
+              if(!visible.has(regra.pergunta_destino_id)){
+                visible.add(regra.pergunta_destino_id);
+                changed=true;
+              }
+            });
         });
+      });
+    }
+    return visible;
+  }
+
+  function limparOcultas(visible){
+    Object.keys(respostas).forEach(id=>{ if(!visible.has(id)) delete respostas[id]; });
+  }
+
+  function respondida(p){
+    const v=respostas[p.id];
+    if(Array.isArray(v)) return v.length>0;
+    return v!==undefined&&v!==null&&String(v).trim()!=='';
+  }
+
+  function payloadAtual(){
+    const visible=visiveis();
+    limparOcultas(visible);
+    const itens=[];
+    (data.perguntas||[]).filter(p=>visible.has(p.id)&&respondida(p)).forEach(p=>{
+      const v=respostas[p.id];
+      if(p.tipo_resposta==='ESCOLHA_UNICA') itens.push({pergunta_id:p.id,opcao_id:v});
+      else if(p.tipo_resposta==='MULTIPLA_ESCOLHA') itens.push({pergunta_id:p.id,opcoes_ids:v});
+      else if(p.tipo_resposta==='NUMERO') itens.push({pergunta_id:p.id,resposta_numero:v});
+      else itens.push({pergunta_id:p.id,resposta_texto:v});
+    });
+    return {respostas:itens};
+  }
+
+  async function persistir(finalizar){
+    if(enviando) return;
+    enviando=true; erro=''; mensagem=''; render();
+    try{
+      const url=finalizar
+        ? `/api/publico/diagnostico/${encodeURIComponent(token)}/finalizar`
+        : `/api/publico/diagnostico/${encodeURIComponent(token)}/respostas`;
+      const r=await fetch(url,{
+        method:finalizar?'POST':'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payloadAtual())
+      });
+      const retorno=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(retorno.detail||`Falha HTTP ${r.status}`);
+      if(finalizar){
+        app.innerHTML=`<h1>Diagnóstico enviado</h1><p class="success">Suas respostas foram registradas com sucesso.</p><p class="muted">A MDP realizará a análise das informações para elaboração do seu diagnóstico.</p>`;
+        return;
       }
-      return visible;
+      data.aplicacao.status=retorno.status;
+      mensagem=`Respostas salvas com sucesso. Você pode continuar preenchendo agora ou fechar esta página e retornar depois pelo mesmo link. Progresso: ${retorno.respondidas} de ${retorno.aplicaveis}.`;
+    }catch(e){
+      erro=e.message;
+      if(finalizar && erro.startsWith('Existem perguntas obrigatórias sem resposta:')){
+        erro='Antes de enviar, responda as perguntas obrigatórias indicadas abaixo.';
+      }
     }
+    finally{enviando=false; if(!finalizar||erro) render();}
+  }
 
-    function limparOcultas(visible){
-      Object.keys(respostas).forEach(id=>{ if(!visible.has(id)) delete respostas[id]; });
-    }
+  function render(){
+    const perguntas=data.perguntas||[];
+    const visible=visiveis();
+    limparOcultas(visible);
+    const aplicaveis=perguntas.filter(p=>visible.has(p.id));
+    const totalRespondidas=aplicaveis.filter(respondida).length;
+    const campos=aplicaveis.map(p=>{
+      let campo='';
+      if(p.opcoes?.length){
+        campo=p.opcoes.map(o=>{
+          const multiple=p.tipo_resposta==='MULTIPLA_ESCOLHA';
+          const checked=multiple?(respostas[p.id]||[]).includes(o.id):respostas[p.id]===o.id;
+          return `<label class="option"><input type="${multiple?'checkbox':'radio'}" name="p_${esc(p.id)}" value="${esc(o.id)}" ${checked?'checked':''}> ${esc(o.rotulo)}</label>`;
+        }).join('');
+      }else if(p.tipo_resposta==='NUMERO'){
+        campo=`<input type="number" step="any" data-pergunta="${esc(p.id)}" value="${esc(respostas[p.id]??'')}">`;
+      }else{
+        campo=`<textarea rows="3" data-pergunta="${esc(p.id)}">${esc(respostas[p.id]??'')}</textarea>`;
+      }
+      return `<div class="question" data-question="${esc(p.id)}"><div class="muted">${esc(p.categoria||'')}</div><p><strong>${esc(p.pergunta)}</strong>${p.obrigatoria?' *':''}</p>${p.ajuda?`<p class="help">${esc(p.ajuda)}</p>`:''}${campo}</div>`;
+    }).join('');
 
-    function render(){
-      const visible=visiveis();
-      limparOcultas(visible);
-      const campos=perguntas.filter(p=>visible.has(p.id)).map(p=>{
-        let campo='';
-        if(p.opcoes?.length){
-          campo=p.opcoes.map(o=>{
-            const multiple=p.tipo_resposta==='MULTIPLA_ESCOLHA';
-            const checked=multiple
-              ? (respostas[p.id]||[]).includes(o.id)
-              : respostas[p.id]===o.id;
-            return `<label class="option"><input type="${multiple?'checkbox':'radio'}" name="p_${esc(p.id)}" value="${esc(o.id)}" ${checked?'checked':''}> ${esc(o.rotulo)}</label>`;
-          }).join('');
-        }else if(p.tipo_resposta==='NUMERO'){
-          campo=`<input type="number" data-pergunta="${esc(p.id)}" value="${esc(respostas[p.id]??'')}">`;
-        }else{
-          campo=`<textarea rows="3" data-pergunta="${esc(p.id)}">${esc(respostas[p.id]??'')}</textarea>`;
-        }
-        return `<div class="question" data-question="${esc(p.id)}"><div class="muted">${esc(p.categoria||'')}</div><p><strong>${esc(p.pergunta)}</strong>${p.obrigatoria?' *':''}</p>${campo}</div>`;
-      }).join('');
+    app.innerHTML=`<h1>${esc(data.formulario.nome)}</h1>${data.formulario.descricao?`<p class="muted">${esc(data.formulario.descricao)}</p>`:''}<p class="muted">Formulário atribuído a ${esc(data.aplicacao.contato_nome||'contato')} · versão ${esc(data.formulario.versao)}</p><div class="status">Progresso: <strong>${totalRespondidas} de ${aplicaveis.length}</strong> perguntas aplicáveis respondidas.</div>${mensagem?`<p class="success">${esc(mensagem)}</p>`:''}${erro?`<p class="error">${esc(erro)}</p>`:''}${campos}<div class="actions"><button class="secondary" id="salvar" ${enviando?'disabled':''}>Salvar e continuar depois</button><button id="finalizar" ${enviando?'disabled':''}>Enviar diagnóstico</button></div>`;
 
-      app.innerHTML=`<h1>${esc(data.formulario.nome)}</h1>${data.formulario.descricao?`<p class="muted">${esc(data.formulario.descricao)}</p>`:''}<p class="muted">Formulário atribuído a ${esc(data.aplicacao.contato_nome||'contato')} · versão ${esc(data.formulario.versao)}</p>${campos}<p class="muted">Nesta etapa o acesso é somente para validação. O envio de respostas será habilitado na próxima etapa.</p><button disabled>Enviar respostas</button>`;
+    app.querySelectorAll('input[type="radio"]').forEach(input=>{
+      input.onchange=()=>{respostas[input.closest('[data-question]').dataset.question]=input.value; mensagem=''; erro=''; render();};
+    });
+    app.querySelectorAll('input[type="checkbox"]').forEach(input=>{
+      input.onchange=()=>{
+        const id=input.closest('[data-question]').dataset.question;
+        const selected=new Set(respostas[id]||[]);
+        input.checked?selected.add(input.value):selected.delete(input.value);
+        if(selected.size) respostas[id]=[...selected]; else delete respostas[id];
+        mensagem=''; erro=''; render();
+      };
+    });
+    app.querySelectorAll('input[type="number"],textarea').forEach(input=>{
+      input.oninput=()=>{
+        const v=input.value;
+        if(v.trim()==='') delete respostas[input.dataset.pergunta]; else respostas[input.dataset.pergunta]=v;
+        mensagem=''; erro='';
+      };
+    });
+    document.getElementById('salvar').onclick=()=>persistir(false);
+    document.getElementById('finalizar').onclick=()=>persistir(true);
+  }
 
-      app.querySelectorAll('input[type="radio"]').forEach(input=>{
-        input.onchange=()=>{
-          const question=input.closest('[data-question]');
-          respostas[question.dataset.question]=input.value;
-          render();
-        };
-      });
-      app.querySelectorAll('input[type="checkbox"]').forEach(input=>{
-        input.onchange=()=>{
-          const question=input.closest('[data-question]');
-          const id=question.dataset.question;
-          const selected=new Set(respostas[id]||[]);
-          input.checked?selected.add(input.value):selected.delete(input.value);
-          respostas[id]=[...selected];
-          render();
-        };
-      });
-      app.querySelectorAll('input[type="number"],textarea').forEach(input=>{
-        input.oninput=()=>{ respostas[input.dataset.pergunta]=input.value; };
-      });
-    }
-
+  try{
+    const r=await fetch(`/api/publico/diagnostico/${encodeURIComponent(token)}`);
+    data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.detail||`Falha HTTP ${r.status}`);
+    carregarRespostasSalvas(data.respostas);
     render();
   }catch(e){app.innerHTML=`<h1>Acesso ao diagnóstico</h1><p class="error">${esc(e.message)}</p>`;}
 })();
