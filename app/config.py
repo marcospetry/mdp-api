@@ -29,6 +29,15 @@ class Settings(BaseSettings):
 
     # Desenvolvimento local: bypass explícito de autenticação.
     # Seguro por padrão: só fica efetivo quando APP_ENV=development E DEV_AUTH_BYPASS=true.
+    # --- Omni / Meta (Instagram). Tudo desligado por padrao: OMNI_META_ENABLED=false ---
+    omni_meta_enabled: bool = False
+    omni_public_base_url: str = "https://api.mdpconsultoria.com.br"
+    omni_connection_encryption_key: str | None = None
+    instagram_app_id: str | None = None
+    instagram_app_secret: str | None = None
+    instagram_webhook_verify_token: str | None = None
+    meta_graph_version: str = "v25.0"
+
     app_env: str = "production"
     dev_auth_bypass: bool = False
     dev_auth_empresa_slug: str = "mdp"

@@ -13,20 +13,20 @@ from app.config import settings
 from app.database import PlatformSessionLocal, tenant_session
 from app.models.platform_auth import PlatformTenant
 
-EMAIL = "e2e.revisor@exemplo-teste.com.br"
+EMAILS = ["e2e.revisor@exemplo-teste.com.br", "e2e.admin@exemplo-teste.com.br"]
 if settings.app_env.strip().lower() not in ("development", "dev", "test", "local"):
     sys.exit("Recusado: so roda com APP_ENV de desenvolvimento/teste.")
 db = PlatformSessionLocal()
 demo = db.query(PlatformTenant).filter(PlatformTenant.codigo == "MDP_DEMO").first()
-uid = db.execute(text("select id from usuarios where email=:e"), {"e": EMAIL}).scalar()
+uids = [r[0] for r in db.execute(text("select id from usuarios where email = any(:e)"), {"e": EMAILS})]
 with tenant_session(db, demo.id) as t:
     seed_omni_demo.remove(t)
-    if uid:
+    for uid in uids:
         t.execute(text("delete from usuarios_empresas where usuario_id in (select id from usuarios_tenant where platform_usuario_id=:u)"), {"u": str(uid)})
         t.execute(text("delete from usuarios_tenant where platform_usuario_id=:u"), {"u": str(uid)})
     t.commit()
-if uid:
+for uid in uids:
     for sql in ("delete from sessoes_usuario where usuario_id=:u", "delete from usuarios_tenants where usuario_id=:u", "delete from usuarios where id=:u"):
         db.execute(text(sql), {"u": str(uid)})
-    db.commit()
+db.commit()
 print("removido.")

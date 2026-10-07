@@ -27,7 +27,7 @@
       no_omni: "Your account does not have access to MDP Omni.",
       int_title: "Integrations", int_lead: "Connect your Instagram and Facebook accounts to receive messages and comments in one place, and reply from here.",
       instagram: "Instagram", facebook_page: "Facebook Page", messenger: "Messenger",
-      st_NOT_CONNECTED: "Not connected", st_CONNECTED: "Connected", st_PENDENTE: "Pending", st_EXPIRANDO: "Expiring soon", st_EXPIRADO: "Expired", st_REVOGADO: "Disconnected", st_ERRO: "Error",
+      st_NOT_CONNECTED: "Not connected", st_CONNECTED: "Connected", st_PENDING: "Pending", st_EXPIRING: "Expiring soon", st_EXPIRED: "Expired", st_REVOKED: "Disconnected", st_ERROR: "Error",
       ig_desc: "Receive direct messages and comments on your posts, and reply from MDP Omni. You will sign in with Instagram.",
       fb_desc: "Receive Messenger conversations and comments on your Page's posts, and reply from MDP Omni. You will sign in with Facebook and choose which Page to connect.",
       connect_ig: "Connect Instagram", connect_fb: "Connect Facebook Page", reconnect: "Reconnect", disconnect: "Disconnect",
@@ -40,7 +40,14 @@
       reply_ph: "Write a reply…", send: "Send", sending: "Sending…", closed_note: "You can reply again after the customer writes to you.",
       sent_ok: "Sent from MDP Omni · Delivered", not_sent: "Not sent: channel not connected", not_sent_gen: "Not sent", saved_not_sent: "Saved, but not sent: this channel is not connected yet.",
       comments: "Comments", no_comments: "No comments yet.", on_post: "On post", reply: "Reply", replied: "Replied", reply_to: "Reply to ", cancel: "Cancel",
-      sent_by: "Sent from MDP Omni", err_window: "The 24-hour reply window is closed.", err_empty: "Write a message first.", now: "now"
+      sent_by: "Sent from MDP Omni", err_window: "The 24-hour reply window is closed.", err_empty: "Write a message first.", now: "now",
+      disconnect_confirm: "Disconnect this account? We will stop receiving its messages and comments.", disconnected: "Account disconnected.", refresh: "Refresh", refreshing: "Refreshing…",
+      not_sent_expired: "Not sent: the Instagram connection expired. Reconnect it in Integrations.", not_sent_unavailable: "Not sent: Instagram is unavailable. Try again.", not_sent_rejected: "Not sent: Instagram rejected the message.",
+      ig_connected: "Instagram connected.", ig_connected_warn: "Instagram connected, but real-time updates could not be confirmed. Use Refresh in Comments.",
+      ig_denied: "The Instagram connection was cancelled.", ig_state: "The connection request expired or could not be verified. Please try again.",
+      ig_exchange: "Instagram did not accept the authorization. Please try again.", ig_not_professional: "This must be an Instagram professional account (Business or Creator).",
+      ig_permissions: "Please allow all requested permissions to connect.", ig_already_connected: "This Instagram account is already connected to another workspace.",
+      ig_disabled: "Connecting Instagram is not enabled yet.", ig_setup: "Setup is incomplete. Please contact support."
     },
     pt: {
       signin: "Entrar", signin_sub: "Use seu e-mail e senha para acessar seu workspace.", email: "E-mail", password: "Senha",
@@ -55,7 +62,7 @@
       no_omni: "Sua conta não tem acesso ao MDP Omni.",
       int_title: "Integrações", int_lead: "Conecte suas contas do Instagram e do Facebook para receber mensagens e comentários em um só lugar e responder por aqui.",
       instagram: "Instagram", facebook_page: "Página do Facebook", messenger: "Messenger",
-      st_NOT_CONNECTED: "Não conectado", st_CONNECTED: "Conectado", st_PENDENTE: "Pendente", st_EXPIRANDO: "Expirando", st_EXPIRADO: "Expirado", st_REVOGADO: "Desconectado", st_ERRO: "Erro",
+      st_NOT_CONNECTED: "Não conectado", st_CONNECTED: "Conectado", st_PENDING: "Pendente", st_EXPIRING: "Expirando", st_EXPIRED: "Expirado", st_REVOKED: "Desconectado", st_ERROR: "Erro",
       ig_desc: "Receba mensagens diretas e comentários dos seus posts e responda pelo MDP Omni. Você entrará com o Instagram.",
       fb_desc: "Receba conversas do Messenger e comentários nos posts da sua Página e responda pelo MDP Omni. Você entrará com o Facebook e escolherá qual Página conectar.",
       connect_ig: "Conectar Instagram", connect_fb: "Conectar Página do Facebook", reconnect: "Reconectar", disconnect: "Desconectar",
@@ -68,11 +75,18 @@
       reply_ph: "Escreva uma resposta…", send: "Enviar", sending: "Enviando…", closed_note: "Você poderá responder de novo depois que o cliente escrever.",
       sent_ok: "Enviado pelo MDP Omni · Entregue", not_sent: "Não enviado: canal não conectado", not_sent_gen: "Não enviado", saved_not_sent: "Salvo, mas não enviado: este canal ainda não está conectado.",
       comments: "Comentários", no_comments: "Nenhum comentário ainda.", on_post: "No post", reply: "Responder", replied: "Respondido", reply_to: "Responder a ", cancel: "Cancelar",
-      sent_by: "Enviado pelo MDP Omni", err_window: "A janela de resposta de 24h está fechada.", err_empty: "Escreva uma mensagem primeiro.", now: "agora"
+      sent_by: "Enviado pelo MDP Omni", err_window: "A janela de resposta de 24h está fechada.", err_empty: "Escreva uma mensagem primeiro.", now: "agora",
+      disconnect_confirm: "Desconectar esta conta? Deixaremos de receber suas mensagens e comentários.", disconnected: "Conta desconectada.", refresh: "Atualizar", refreshing: "Atualizando…",
+      not_sent_expired: "Não enviado: a conexão com o Instagram expirou. Reconecte em Integrações.", not_sent_unavailable: "Não enviado: o Instagram está indisponível. Tente de novo.", not_sent_rejected: "Não enviado: o Instagram recusou a mensagem.",
+      ig_connected: "Instagram conectado.", ig_connected_warn: "Instagram conectado, mas não foi possível confirmar as atualizações em tempo real. Use Atualizar em Comentários.",
+      ig_denied: "A conexão com o Instagram foi cancelada.", ig_state: "O pedido de conexão expirou ou não pôde ser verificado. Tente novamente.",
+      ig_exchange: "O Instagram não aceitou a autorização. Tente novamente.", ig_not_professional: "Precisa ser uma conta profissional do Instagram (Empresa ou Criador de conteúdo).",
+      ig_permissions: "Autorize todas as permissões pedidas para conectar.", ig_already_connected: "Esta conta do Instagram já está conectada a outro workspace.",
+      ig_disabled: "A conexão com o Instagram ainda não está habilitada.", ig_setup: "A configuração está incompleta. Fale com o suporte."
     }
   };
 
-  var state = { lang: "en", access: null, refresh: null, me: null, tab: null, poll: null, refreshing: null, inbox: { channel: null, selected: null }, comments: { channel: null } };
+  var state = { flash: null, lang: "en", access: null, refresh: null, me: null, tab: null, poll: null, refreshing: null, inbox: { channel: null, selected: null }, comments: { channel: null } };
   try { var saved = localStorage.getItem("mdp_omni_lang"); if (saved === "pt" || saved === "en") state.lang = saved; } catch (e) { /* ignore */ }
 
   function t(key) { var d = I18N[state.lang]; return (d && d[key]) || I18N.en[key] || key; }
@@ -175,7 +189,7 @@
   /* ---------------------------------------------------------------- login */
   function renderLogin(notice, pre) {
     stopPoll(); document.documentElement.lang = state.lang;
-    var msg = h("div", { class: "notice err", role: "alert", style: notice ? "" : "display:none", text: notice ? notice.text : "" });
+    var msg = h("div", { class: "notice" + (notice && notice.kind === "ok" ? "" : " err"), role: "alert", style: notice ? "" : "display:none", text: notice ? notice.text : "" });
     var emailIn = h("input", { id: "email", type: "email", autocomplete: "username", placeholder: t("email_ph"), required: true, value: pre && pre.email ? pre.email : "" });
     var passIn = h("input", { id: "password", type: "password", autocomplete: "current-password", placeholder: t("password_ph"), required: true });
     var submit = h("button", { class: "btn primary", type: "submit", text: t("signin") });
@@ -272,7 +286,7 @@
 
   /* ---------------------------------------------------------------- Integrations */
   function statusChip(status) {
-    var cls = status === "CONNECTED" ? "ok" : (status === "EXPIRANDO" || status === "PENDENTE") ? "warn" : (status === "ERRO" || status === "EXPIRADO") ? "bad" : "";
+    var cls = status === "CONNECTED" ? "ok" : (status === "EXPIRING" || status === "PENDING") ? "warn" : (status === "ERROR" || status === "EXPIRED") ? "bad" : "";
     return h("span", { class: "chip " + cls, text: t("st_" + status) });
   }
 
@@ -283,12 +297,22 @@
       h("p", { class: "foot" }, t("int_foot") + " ", h("a", { href: legal().privacy, target: "_blank", rel: "noopener", text: t("privacy") }), " · ", h("a", { href: legal().deletion, target: "_blank", rel: "noopener", text: t("request_deletion") }))));
     function say(text, err) { notice.style.display = ""; notice.className = "notice" + (err ? " err" : ""); notice.textContent = text; }
 
+    function stashReturn() {
+      try { sessionStorage.setItem("mdp_omni_return", JSON.stringify({ r: state.refresh, t: Date.now() })); } catch (e) { /* sem sessionStorage: o usuario entra de novo ao voltar */ }
+    }
     async function act(provider, method) {
-      try { await api("/api/omni/integrations/" + provider + (method === "POST" ? "/connect" : ""), { method: method }); load(); }
+      if (method === "DELETE" && !window.confirm(t("disconnect_confirm"))) return;
+      try {
+        var res = await api("/api/omni/integrations/" + provider + (method === "POST" ? "/connect" : ""), { method: method });
+        if (method === "POST" && res && res.authorization_url) { stashReturn(); window.location.href = res.authorization_url; return; }
+        if (method === "DELETE") say(t("disconnected"), false);
+        load();
+      }
       catch (e) { if (e.message === "session") return; say(e.status === 501 ? t(method === "POST" ? "not_enabled" : "disc_not_enabled") : t("err_generic"), true); }
     }
     function card(i) {
-      var ig = i.provider === "INSTAGRAM", connected = i.status === "CONNECTED" || i.status === "EXPIRANDO";
+      var ig = i.provider === "INSTAGRAM", connected = i.status === "CONNECTED" || i.status === "EXPIRING";
+      var reconnect = i.status === "EXPIRING" || i.status === "EXPIRED" || i.status === "ERROR";
       var name = i.account_name || "";
       return h("section", { class: "chan" },
         h("div", { class: "head" }, h("h2", { text: ig ? t("instagram") : t("facebook_page") }), statusChip(i.status)),
@@ -298,14 +322,16 @@
         h("div", { class: "meta" },
           connected ? [h("div", {}, h("b", { text: t("access_granted") + ": " }), ig ? t("ig_scopes") : t("fb_scopes")), h("div", {}, h("b", { text: t("connection") + ": " }), t("renews"))]
             : [h("div", {}, h("b", { text: t("you_choose") + ": " }), t("you_choose_v")), h("div", {}, h("b", { text: t("control") + ": " }), t("control_v"))]),
-        h("div", { class: "acts" }, connected
-          ? [h("button", { class: "btn", type: "button", text: t("reconnect"), onclick: function () { act(i.provider, "POST"); } }), h("button", { class: "btn danger", type: "button", text: t("disconnect"), onclick: function () { act(i.provider, "DELETE"); } })]
+        h("div", { class: "acts" }, connected || reconnect
+          ? [h("button", { class: "btn" + (reconnect ? " primary" : ""), type: "button", text: t("reconnect"), onclick: function () { act(i.provider, "POST"); } }),
+             connected ? h("button", { class: "btn danger", type: "button", text: t("disconnect"), onclick: function () { act(i.provider, "DELETE"); } }) : null]
           : h("button", { class: "btn primary", type: "button", text: ig ? t("connect_ig") : t("connect_fb"), onclick: function () { act(i.provider, "POST"); } })));
     }
     async function load() {
       try { var list = await api("/api/omni/integrations"); clear(grid); list.forEach(function (i) { grid.appendChild(card(i)); }); }
       catch (e) { if (e.message !== "session") { clear(grid); say(t("err_generic"), true); } }
     }
+    if (state.flash) { say(state.flash.text, state.flash.err); state.flash = null; }
     load();
   }
 
@@ -314,7 +340,13 @@
     function b(code, label) { return h("button", { type: "button", class: current === code ? "on" : "", onclick: function () { onPick(code); }, text: label }); }
     return h("div", { class: "filters" }, b(null, t("all")), b("INSTAGRAM", t("instagram")), b("FACEBOOK", t("messenger")));
   }
-  function errText(code) { return code === "channel_not_connected" ? t("not_sent") : t("not_sent_gen"); }
+  function errText(code) {
+    if (code === "channel_not_connected") return t("not_sent");
+    if (code === "meta_190" || code === "meta_102") return t("not_sent_expired");
+    if (code === "meta_unavailable") return t("not_sent_unavailable");
+    if (typeof code === "string" && code.indexOf("meta_") === 0) return t("not_sent_rejected");
+    return t("not_sent_gen");
+  }
 
   function viewInbox(root) {
     var list = h("div", {}, h("div", { class: "empty", text: t("loading") }));
@@ -400,7 +432,9 @@
   function viewComments(root) {
     var listBox = h("div", { style: "display:flex;flex-direction:column;gap:18px" }, h("div", { class: "empty", text: t("loading") }));
     var filters = h("div");
-    root.appendChild(h("main", { style: "max-width:1040px" }, h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap" }, h("h1", { text: t("comments") }), filters), listBox));
+    var refreshBtn = h("button", { class: "btn sm", type: "button", text: t("refresh"), onclick: function () { syncAndLoad(true); } });
+    root.appendChild(h("main", { style: "max-width:1040px" }, h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap" }, h("h1", { text: t("comments") }), h("div", { style: "display:flex;gap:12px;align-items:center;flex-wrap:wrap" }, filters, refreshBtn)), listBox));
+    var composerOpen = false;
     function drawFilters() { clear(filters).appendChild(filterBar(state.comments.channel, function (c) { state.comments.channel = c; load(); drawFilters(); })); }
 
     function replyNode(r) {
@@ -412,13 +446,14 @@
       var who = c.author_username ? "@" + c.author_username : (c.author_name || "—");
       var composerBox = h("div");
       var open = h("button", { class: "btn sm", type: "button", text: t("reply"), onclick: function () {
+        composerOpen = true;
         var input = h("input", { type: "text", maxlength: "1000", placeholder: t("reply_to") + who + "…", "aria-label": t("reply_to") + who });
         var send = h("button", { class: "btn primary", type: "submit", text: t("reply") });
         var info = h("div", { class: "info bad", style: "font-size:13px;color:#f5c26b;margin-top:8px", role: "status" });
         clear(composerBox).appendChild(h("div", {}, h("form", { class: "composer", onsubmit: async function (ev) {
           ev.preventDefault(); var text = input.value.trim(); info.textContent = ""; if (!text) { info.textContent = t("err_empty"); return; }
           send.disabled = true; send.textContent = t("sending");
-          try { var r = await api("/api/omni/comments/" + c.id + "/reply", { method: "POST", body: { text: text } }); replies.appendChild(replyNode(r)); input.value = ""; if (r.status !== "ENVIADA") info.textContent = t("saved_not_sent"); }
+          try { var r = await api("/api/omni/comments/" + c.id + "/reply", { method: "POST", body: { text: text } }); replies.appendChild(replyNode(r)); input.value = ""; if (r.status !== "ENVIADA") info.textContent = errText(r.error); }
           catch (e) { if (e.message !== "session") info.textContent = e.status === 422 ? t("err_empty") : t("err_generic"); }
           send.disabled = false; send.textContent = t("reply");
         } }, input, send), info));
@@ -432,15 +467,65 @@
     async function load() {
       try {
         var q = state.comments.channel ? "?channel=" + state.comments.channel : "";
-        var items = await api("/api/omni/comments" + q); clear(listBox);
+        var items = await api("/api/omni/comments" + q); clear(listBox); composerOpen = false;
         if (!items.length) listBox.appendChild(h("div", { class: "empty", text: t("no_comments") }));
         items.forEach(function (c) { listBox.appendChild(card(c)); });
       } catch (e) { if (e.message !== "session") clear(listBox).appendChild(h("div", { class: "empty", text: t("err_generic") })); }
     }
-    drawFilters(); load();
+    /* Pergunta ao Instagram por comentarios novos (a Meta so manda webhook de comentarios com Acesso Avancado) e recarrega a lista. */
+    async function syncAndLoad(manual) {
+      if (manual) { refreshBtn.disabled = true; refreshBtn.textContent = t("refreshing"); }
+      try { await api("/api/omni/comments/sync", { method: "POST" }); } catch (e) { if (e.message === "session") return; /* a lista abaixo ainda mostra o que ja temos */ }
+      if (manual || !composerOpen) await load();
+      if (manual) { refreshBtn.disabled = false; refreshBtn.textContent = t("refresh"); }
+    }
+    drawFilters(); syncAndLoad(false);
+    state.poll = setInterval(function () { syncAndLoad(false); }, 60000);
   }
 
   /* ---------------------------------------------------------------- start */
+  /* Sessao entregue pelo login do backoffice (/login) para usuarios so-Omni: valida por 30 s e e apagada ao ler. */
+  function takeHandoff() {
+    try {
+      var raw = sessionStorage.getItem("mdp_omni_handoff");
+      sessionStorage.removeItem("mdp_omni_handoff");
+      if (!raw) return null;
+      var h = JSON.parse(raw);
+      if (!h || !h.a || !h.r || typeof h.t !== "number" || Date.now() - h.t > 30000) return null;
+      return h;
+    } catch (e) { return null; }
+  }
+
+  /* Volta do Instagram: a sessao so existe em memoria, entao antes de sair guardamos o refresh token (15 min, uso unico). */
+  function takeReturn() {
+    try {
+      var raw = sessionStorage.getItem("mdp_omni_return");
+      sessionStorage.removeItem("mdp_omni_return");
+      if (!raw) return null;
+      var r = JSON.parse(raw);
+      if (!r || !r.r || typeof r.t !== "number" || Date.now() - r.t > 15 * 60000) return null;
+      return r;
+    } catch (e) { return null; }
+  }
+  function readFlash() {
+    var q = new URLSearchParams(window.location.search), res = null;
+    if (q.get("ig") === "connected") res = { text: t(q.get("ig_warn") ? "ig_connected_warn" : "ig_connected"), err: false };
+    else if (q.get("ig_error")) {
+      var key = "ig_" + q.get("ig_error");
+      res = { text: I18N.en[key] ? t(key) : t("err_generic"), err: true };
+    }
+    if (res) { try { window.history.replaceState(null, "", "/omni#integrations"); } catch (e) { /* ignore */ } }
+    return res;
+  }
+
   document.documentElement.lang = state.lang;
-  renderLogin();
+  state.flash = readFlash();
+  var ret = state.flash ? takeReturn() : null;
+  var handoff = ret ? null : takeHandoff();
+  if (ret) {
+    state.refresh = ret.r;
+    doRefresh().then(function (ok) { if (ok) { location.hash = "integrations"; enterApp(); } else { renderLogin(); } });
+  }
+  else if (handoff) { state.access = handoff.a; state.refresh = handoff.r; enterApp(); }
+  else { renderLogin(state.flash ? { text: state.flash.text, kind: state.flash.err ? "err" : "ok" } : null); }
 })();

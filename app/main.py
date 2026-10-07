@@ -16,6 +16,8 @@ from app.routers.diagnostico_aplicacoes import router as diagnostico_aplicacoes_
 from app.routers.diagnostico_publico import router as diagnostico_publico_router
 from app.routers.auth import router as auth_router
 from app.routers.contatos import router as contatos_router
+from app import logging_filters
+from app.routers.meta_instagram_webhook import router as meta_instagram_webhook_router
 from app.routers.omni import router as omni_router
 from pathlib import Path
 
@@ -36,6 +38,8 @@ app = FastAPI(
     title="MDP API",
     version="0.5.0",
 )
+
+logging_filters.install()
 
 
 app.add_middleware(
@@ -59,6 +63,7 @@ app.add_middleware(
 app.include_router(contatos_router)
 app.include_router(auth_router)
 app.include_router(omni_router)
+app.include_router(meta_instagram_webhook_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)
 app.include_router(diagnostico_estrutura_router)

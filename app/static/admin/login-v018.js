@@ -224,10 +224,29 @@
     showAdminView("home");
   }
 
+  // Usuarios cujo perfil so tem permissoes do Omni (ex.: revisor da Meta) nao usam o backoffice:
+  // vao direto para /omni. Passagem de sessao por sessionStorage, lida e apagada de imediato pela pagina /omni.
+  function isOmniOnly(me) {
+    const perms = me?.permissoes || [];
+    return perms.length > 0 && perms.every(p => typeof p === "string" && p.startsWith("OMNI_"));
+  }
+  function handOffToOmni() {
+    try {
+      sessionStorage.setItem("mdp_omni_handoff", JSON.stringify({ a: state.accessToken, r: state.refreshToken, t: Date.now() }));
+    } catch (e) { return false; }
+    state.accessToken = null; state.refreshToken = null;
+    window.location.replace("/omni");
+    return true;
+  }
+
   async function finishAuthentication(body) {
     state.accessToken = body.access_token;
     state.refreshToken = body.refresh_token;
     state.preauthToken = null;
+    try {
+      const me = await request("/api/auth/me");
+      if (isOmniOnly(me) && handOffToOmni()) return;
+    } catch (e) { /* segue o fluxo normal */ }
     await loadMe();
   }
 

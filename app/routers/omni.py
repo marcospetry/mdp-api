@@ -6,18 +6,27 @@ plataforma (tenant_endpoints + canal_conexoes). Tokens NUNCA sao retornados.
 """
 from __future__ import annotations
 
+import hmac
+import logging
+import secrets
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.database import get_platform_db
+from app.config import settings
+from app.database import PlatformSessionLocal, get_platform_db
 from app.security.dependencies import get_authorized_tenant_db, require_permission
+from app.services import meta_instagram, omni_connections, omni_sync
 from app.services.auth_service import utcnow
 from app.services.omni_send import send_comment_reply, send_direct_message
+
+logger = logging.getLogger("mdp.omni")
 
 router = APIRouter(prefix="/api/omni", tags=["Omni"])
 
@@ -35,12 +44,14 @@ def _iso(value):
     return value.isoformat() if value else None
 
 
-def _clean_text(value: str) -> str:
+def _clean_text(value: str, max_bytes: int | None = None) -> str:
     cleaned = (value or "").strip()
     if not cleaned:
         raise HTTPException(status_code=422, detail="Message cannot be empty.")
     if len(cleaned) > MAX_REPLY_CHARS:
         raise HTTPException(status_code=422, detail=f"Message is too long (max {MAX_REPLY_CHARS} characters).")
+    if max_bytes and len(cleaned.encode("utf-8")) > max_bytes:
+        raise HTTPException(status_code=422, detail=f"Message is too long (max {max_bytes} bytes).")
     return cleaned
 
 
@@ -82,7 +93,7 @@ def list_integrations(
         result.append(
             {
                 "provider": provider,
-                "status": (row["status"] if row and row["status"] else "NOT_CONNECTED"),
+                "status": omni_connections.api_status(row["status"] if row else None, row["token_expira_em"] if row else None),
                 "account_name": (meta.get("name") or (row["nome"] if row else None)),
                 "handle": meta.get("username"),
                 "connected_at": _iso(row["conectado_em"]) if row else None,
@@ -99,16 +110,99 @@ def _provider_or_404(provider: str) -> str:
     return provider
 
 
+OAUTH_COOKIE = "omni_oauth_nonce"
+OAUTH_COOKIE_PATH = "/api/omni/oauth"
+STATE_TTL = 600
+
+
+def _meta_ready() -> bool:
+    return bool(settings.omni_meta_enabled and settings.instagram_app_id and settings.instagram_app_secret
+                and settings.omni_connection_encryption_key and settings.omni_public_base_url)
+
+
+def _redirect_uri() -> str:
+    return settings.omni_public_base_url.rstrip("/") + "/api/omni/oauth/instagram/callback"
+
+
 @router.post("/integrations/{provider}/connect")
 def connect_integration(provider: str, context=Depends(require_permission("OMNI_INTEGRACOES"))):
-    _provider_or_404(provider)
-    raise HTTPException(status_code=501, detail="Connecting channels is not enabled yet.")
+    provider = _provider_or_404(provider)
+    if provider != "INSTAGRAM" or not _meta_ready():
+        raise HTTPException(status_code=501, detail="Connecting channels is not enabled yet.")
+    nonce = secrets.token_urlsafe(24)
+    state = jwt.encode(
+        {"purpose": "ig_oauth", "tid": str(context["tenant_id"]), "uid": str(context["usuario"].id), "nonce": nonce,
+         "exp": utcnow() + timedelta(seconds=STATE_TTL)}, settings.secret_key, algorithm=settings.jwt_algorithm)
+    resp = JSONResponse({"authorization_url": meta_instagram.build_authorize_url(_redirect_uri(), state)})
+    # o nonce prende o fluxo a ESTE navegador (protege contra conectar a conta de outra pessoa ao seu tenant)
+    resp.set_cookie(OAUTH_COOKIE, nonce, max_age=STATE_TTL, httponly=True, samesite="lax", path=OAUTH_COOKIE_PATH,
+                    secure=settings.omni_public_base_url.startswith("https://"))
+    return resp
+
+
+@router.get("/oauth/instagram/callback", include_in_schema=False)
+def instagram_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    def back(result: str, key: str = "ig_error", extra: str = ""):
+        resp = RedirectResponse(f"/omni?{key}={result}{extra}", status_code=303)
+        resp.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
+        return resp
+
+    if not _meta_ready():
+        return back("disabled")
+    if error:
+        return back("denied")
+    try:
+        claims = jwt.decode(state or "", settings.secret_key, algorithms=[settings.jwt_algorithm])
+        if claims.get("purpose") != "ig_oauth":
+            raise jwt.InvalidTokenError("purpose")
+    except jwt.PyJWTError:
+        return back("state")
+    cookie = request.cookies.get(OAUTH_COOKIE) or ""
+    if not cookie or not hmac.compare_digest(cookie.encode(), str(claims.get("nonce", "")).encode()):
+        return back("state")
+    if not code:
+        return back("denied")
+    try:
+        short = meta_instagram.exchange_code(code, _redirect_uri())
+        long_ = meta_instagram.to_long_lived(short["access_token"])
+        me = meta_instagram.get_me(long_["access_token"])
+    except meta_instagram.MetaApiError as exc:
+        logger.warning("ig_oauth_falhou code=%s", exc.code)
+        return back("exchange")
+    if me["account_type"].lower() not in meta_instagram.PROFESSIONAL_TYPES:
+        return back("not_professional")
+    granted = {p.strip() for p in short["permissions"].split(",") if p.strip()}
+    if granted and not set(meta_instagram.SCOPES) <= granted:
+        return back("permissions")
+    db = PlatformSessionLocal()
+    try:
+        subscribed, webhook_error = True, None
+        try:
+            meta_instagram.subscribe_webhooks(long_["access_token"], me["user_id"])
+        except meta_instagram.MetaApiError as exc:
+            subscribed, webhook_error = False, exc.code
+        omni_connections.upsert_instagram_connection(
+            db, tenant_id=claims["tid"], user_id=claims["uid"], me=me, long_token=long_["access_token"], expires_in=long_["expires_in"],
+            permissions=short["permissions"] or ",".join(meta_instagram.SCOPES), subscribed=subscribed, webhook_error=webhook_error)
+    except omni_connections.AccountAlreadyConnected:
+        return back("already_connected")
+    except omni_connections.EndpointTypeMissing:
+        return back("setup")
+    finally:
+        db.close()
+    logger.info("ig_conectado tenant=%s ig_id=%s webhook=%s", claims["tid"], me["user_id"], "ok" if subscribed else "falhou")
+    return back("connected", key="ig", extra="" if subscribed else "&ig_warn=webhook")
 
 
 @router.delete("/integrations/{provider}")
-def disconnect_integration(provider: str, context=Depends(require_permission("OMNI_INTEGRACOES"))):
-    _provider_or_404(provider)
-    raise HTTPException(status_code=501, detail="Disconnecting channels is not enabled yet.")
+def disconnect_integration(provider: str, context=Depends(require_permission("OMNI_INTEGRACOES")),
+                           platform_db: Session = Depends(get_platform_db)):
+    provider = _provider_or_404(provider)
+    if provider != "INSTAGRAM":
+        raise HTTPException(status_code=501, detail="Disconnecting channels is not enabled yet.")
+    revoked = omni_connections.revoke(platform_db, context["tenant_id"], "INSTAGRAM")
+    logger.info("ig_desconectado tenant=%s revogado=%s", context["tenant_id"], revoked)
+    return {"disconnected": revoked}
 
 
 # --------------------------------------------------------------------------- Inbox
@@ -209,7 +303,7 @@ def reply_conversation(
     context=Depends(require_permission("OMNI_INBOX")),
     db: Session = Depends(get_authorized_tenant_db),
 ):
-    message = _clean_text(body.text)
+    message = _clean_text(body.text, max_bytes=1000)
     conv = _get_conversation(db, conversation_id)
     now = utcnow()
     cliente_em = conv["ultima_mensagem_cliente_em"]
@@ -297,6 +391,14 @@ def list_comments(
         }
         for r in rows
     ]
+
+
+@router.post("/comments/sync")
+def sync_comments(context=Depends(require_permission("OMNI_COMENTARIOS")), db: Session = Depends(get_authorized_tenant_db),
+                  platform_db: Session = Depends(get_platform_db)):
+    if not _meta_ready():
+        return {"new": 0, "skipped": True}
+    return omni_sync.sync_instagram_comments(platform_db, db, context["tenant_id"])
 
 
 @router.post("/comments/{comment_id}/reply", status_code=201)

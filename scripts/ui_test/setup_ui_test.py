@@ -21,6 +21,7 @@ from app.security.password import hash_password
 from app.services.auth_service import utcnow
 
 EMAIL, SENHA = "e2e.revisor@exemplo-teste.com.br", "SenhaE2E#12345"
+EMAIL_ADMIN = "e2e.admin@exemplo-teste.com.br"
 
 if settings.app_env.strip().lower() not in ("development", "dev", "test", "local"):
     sys.exit("Recusado: so roda com APP_ENV de desenvolvimento/teste.")
@@ -29,22 +30,28 @@ db = PlatformSessionLocal()
 demo = db.query(PlatformTenant).filter(PlatformTenant.codigo == "MDP_DEMO").first()
 if not demo:
     sys.exit("Tenant MDP_DEMO nao encontrado.")
-u = db.query(PlatformUsuario).filter(PlatformUsuario.email == EMAIL).first()
-if not u:
-    u = PlatformUsuario(nome="E2E Revisor", email=EMAIL, password_hash=hash_password(SENHA), mfa_dispensado=True,
+def garantir_usuario(email, nome, perfil_codigo):
+    u = db.query(PlatformUsuario).filter(PlatformUsuario.email == email).first()
+    if u:
+        return
+    u = PlatformUsuario(nome=nome, email=email, password_hash=hash_password(SENHA), mfa_dispensado=True,
                         acesso_expira_em=utcnow() + timedelta(days=5))
     db.add(u); db.flush()
     db.add(PlatformUsuarioTenant(id=uuid4(), usuario_id=u.id, tenant_id=demo.id, ativo=True)); db.commit()
     with tenant_session(db, demo.id) as t:
         emp = t.query(Empresa).first()
-        op = t.execute(text("select id from perfis where codigo='OMNI_OPERADOR'")).scalar()
+        perfil = t.execute(text("select id from perfis where codigo=:c"), {"c": perfil_codigo}).scalar()
         loc = UsuarioTenantLocal(platform_usuario_id=u.id, ativo=True); t.add(loc); t.flush()
-        t.add(UsuarioEmpresa(usuario_id=loc.id, empresa_id=emp.id, perfil_id=op, ativo=True, acesso_todas_unidades=True, acesso_todas_areas=True))
+        t.add(UsuarioEmpresa(usuario_id=loc.id, empresa_id=emp.id, perfil_id=perfil, ativo=True, acesso_todas_unidades=True, acesso_todas_areas=True))
         t.commit()
+
+
+garantir_usuario(EMAIL, "E2E Revisor", "OMNI_OPERADOR")
+garantir_usuario(EMAIL_ADMIN, "E2E Admin", "ADMIN")
 with tenant_session(db, demo.id) as t:
     seed_omni_demo.remove(t)
     print("dados de exemplo:", seed_omni_demo.seed(t))
     # texto malicioso de terceiro: o teste confere que aparece como TEXTO e nunca vira HTML
     t.execute(text("update omni_mensagens set texto='<img src=x onerror=window.__xss=1> hello' where external_message_id='sample-ig-2-m1'"))
     t.commit()
-print("pronto. usuario:", EMAIL)
+print("pronto. usuarios:", EMAIL, EMAIL_ADMIN)
