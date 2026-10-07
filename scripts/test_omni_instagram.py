@@ -437,6 +437,22 @@ def main():
         logging_filters.RedactSecretsFilter().filter(rec)
         check("L2 o log do cliente HTTP mascara access_token", "SECRETTOKEN" not in rec.getMessage())
         check("L3 o cliente HTTP so registra a partir de WARNING (nao grava URLs de chamadas)", logging.getLogger("httpx").level == logging.WARNING)
+        # a Meta manda o token de verificacao com PONTO e com SUBLINHADO na mesma chamada (visto em producao): as duas grafias
+        rec = logging.LogRecord("uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d', ("10.0.1.4:1", "GET",
+                                "/api/meta/instagram/webhook?hub.mode=subscribe&hub.challenge=968607311&hub.verify_token=SEGREDO-PONTO&hub_mode=subscribe&hub_challenge=968607311&hub_verify_token=SEGREDO-SUBLINHADO",
+                                "1.1", 200), None)
+        logging_filters.RedactSecretsFilter().filter(rec)
+        line = rec.getMessage()
+        check("L4 o token de verificacao e mascarado nas DUAS grafias (hub.verify_token e hub_verify_token), sem apagar o desafio",
+              "SEGREDO-PONTO" not in line and "SEGREDO-SUBLINHADO" not in line and "hub.challenge=968607311" in line)
+        rec = logging.LogRecord("uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d', ("10.0.1.4:1", "POST",
+                                "/api/auth/mfa/setup?preauth_token=eyJhbGciOi.PREAUTH.x&refresh_token=REFRESH-X&client_secret=CS", "1.1", 200), None)
+        logging_filters.RedactSecretsFilter().filter(rec)
+        line = rec.getMessage()
+        check("L5 preauth_token do MFA, refresh_token e client_secret tambem sao mascarados", all(x not in line for x in ("PREAUTH", "REFRESH-X", "CS\"")) and "preauth_token=REDACTED" in line)
+        rec = logging.LogRecord("uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d', ("10.0.1.4:1", "GET", "/api/omni/conversations?channel=INSTAGRAM&limit=20", "1.1", 200), None)
+        logging_filters.RedactSecretsFilter().filter(rec)
+        check("L6 parametros comuns (canal, limite) NAO sao mascarados", "channel=INSTAGRAM&limit=20" in rec.getMessage())
 
         # ------------------------------------------------------------------ X. permissao
         print("\n[X] Permissoes")

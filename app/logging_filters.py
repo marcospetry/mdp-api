@@ -4,7 +4,9 @@ from __future__ import annotations
 import logging
 import re
 
-_SENSITIVE = re.compile(r"([?&\s](?:code|state|access_token|client_secret|hub\.verify_token)=)[^&\s\"']+")
+# Mascara o VALOR de qualquer parametro de URL cujo nome contenha token/secret/password (ex.: access_token, preauth_token,
+# refresh_token, client_secret, hub.verify_token E hub_verify_token: a Meta manda as duas grafias), alem de code e state.
+_SENSITIVE = re.compile(r"([?&\s](?:code|state|[\w.\-]*(?:token|secret|password|senha)[\w.\-]*)=)[^&\s\"']+", re.IGNORECASE)
 
 
 def redact(value: str) -> str:
