@@ -32,6 +32,8 @@ def get_current_context(
     sessao = platform_db.query(PlatformSessaoUsuario).filter(PlatformSessaoUsuario.id == sessao_id, PlatformSessaoUsuario.usuario_id == usuario_id).first()
     if not usuario or not sessao or sessao.revogada_em is not None or sessao.expira_em <= datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessão inválida.")
+    if usuario.acesso_expira_em and usuario.acesso_expira_em <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Acesso expirado.")
     if sessao.contexto_tipo is not None:
         if sessao.tenant_id != tenant_id or sessao.empresa_id != empresa_id:
             raise HTTPException(status_code=401, detail="Contexto da sessão inválido.")
@@ -85,6 +87,25 @@ def get_current_context(
 def require_tenant_context(context=Depends(get_current_context)):
     if (context.get("contexto_tipo") != "TENANT" or not context.get("tenant_id") or (not context.get("vinculo_tenant") and not context["usuario"].is_superadmin)):
         raise HTTPException(status_code=403, detail="Contexto TENANT necessario.")
+    return context
+
+
+def require_backoffice_context(context=Depends(require_tenant_context), platform_db: Session = Depends(get_platform_db)):
+    """Backoffice (cadastros, diagnostico): bloqueia perfis que SO possuem permissoes do Omni (OMNI_*).
+
+    Perfis com acesso_total (ADMIN) passam direto, sem consulta extra. Os demais so sao barrados
+    se tiverem permissoes e todas forem OMNI_* (ex.: OMNI_OPERADOR, usado pelo revisor da Meta)."""
+    vinculo = context.get("vinculo")
+    if not vinculo or vinculo.perfil.acesso_total:
+        return context
+    with tenant_session(platform_db, context["tenant_id"]) as tenant_db:
+        codigos = [
+            r.permissao.codigo
+            for r in tenant_db.query(PerfilPermissao).filter(PerfilPermissao.perfil_id == vinculo.perfil_id).all()
+            if r.permissao.ativo
+        ]
+    if codigos and all(c.startswith("OMNI_") for c in codigos):
+        raise HTTPException(status_code=403, detail="Perfil sem acesso ao backoffice.")
     return context
 
 

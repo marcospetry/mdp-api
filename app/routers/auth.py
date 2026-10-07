@@ -14,7 +14,7 @@ from app.security.dependencies import get_current_context
 from app.security.jwt import create_preauth_token, decode_token
 from app.security.mfa import decrypt_secret, encrypt_secret, generate_secret, provisioning_uri, verify_totp
 from app.security.password import verify_password
-from app.services.auth_service import create_session, refresh_token_fingerprint, resolve_empresa_tenant, resolve_tenant, revoke_session, rotate_refresh_session, utcnow
+from app.services.auth_service import acesso_expirado, create_session, mfa_dispensa_valida, refresh_token_fingerprint, resolve_empresa_tenant, resolve_tenant, revoke_session, rotate_refresh_session, utcnow
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 logger = logging.getLogger("mdp.auth")
@@ -30,6 +30,8 @@ def _usuario_por_preauth(db: Session, token: str, purpose: str):
         ).first()
         if not usuario:
             raise jwt.InvalidTokenError("Usuário inválido")
+        if acesso_expirado(usuario):
+            raise jwt.InvalidTokenError("Acesso expirado")
         return usuario, UUID(payload["tenant_id"]) if payload.get("tenant_id") else None
     except (jwt.InvalidTokenError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Token de pré-autenticação inválido ou expirado.")
@@ -53,6 +55,9 @@ def login(dados: LoginRequest, request: Request, db: Session = Depends(get_platf
 
     usuario.tentativas_login = 0
     usuario.bloqueado_ate = None
+    if acesso_expirado(usuario, now):
+        db.commit()
+        raise HTTPException(status_code=403, detail="Acesso expirado.")
     # Um unico tenant autorizado e selecionado automaticamente, inclusive
     # para SUPERADMIN. Acesso exclusivamente a Plataforma e explicito.
     if usuario.is_superadmin and dados.contexto_plataforma:
@@ -77,6 +82,20 @@ def login(dados: LoginRequest, request: Request, db: Session = Depends(get_platf
         token = create_preauth_token(usuario.id, tenant_id, purpose)
         db.commit()
         return LoginResponse(status=purpose.upper(), preauth_token=token)
+
+    if mfa_dispensa_valida(usuario, now) and tenant_id:
+        # Excecao controlada (migration 010): usuario nao-SUPERADMIN, sem MFA, com validade futura.
+        # Entra direto no unico Tenant autorizado. Nao ha contexto de Plataforma para este usuario.
+        with tenant_session(db, tenant_id) as tenant_db:
+            empresa_id, _, local = resolve_empresa_tenant(tenant_db, usuario.id)
+        if not local:
+            db.commit()
+            raise HTTPException(status_code=403, detail="Usuário não provisionado no Tenant.")
+        sessao, access, refresh = create_session(db, usuario, tenant_id, empresa_id, request.client.host if request.client else None, request.headers.get("user-agent"))
+        usuario.ultimo_login_em = now
+        db.commit()
+        logger.info("login_mfa_dispensado user_id=%s session_id=%s expira_em=%s", usuario.id, sessao.id, usuario.acesso_expira_em.isoformat())
+        return LoginResponse(status="AUTHENTICATED", access_token=access, refresh_token=refresh, expires_in=settings.access_token_minutes * 60)
 
     raise HTTPException(status_code=409, detail="Fluxo sem MFA ainda não habilitado para a arquitetura Platform/Tenant.")
 

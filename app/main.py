@@ -16,6 +16,7 @@ from app.routers.diagnostico_aplicacoes import router as diagnostico_aplicacoes_
 from app.routers.diagnostico_publico import router as diagnostico_publico_router
 from app.routers.auth import router as auth_router
 from app.routers.contatos import router as contatos_router
+from app.routers.omni import router as omni_router
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -57,6 +58,7 @@ app.add_middleware(
 
 app.include_router(contatos_router)
 app.include_router(auth_router)
+app.include_router(omni_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)
 app.include_router(diagnostico_estrutura_router)
@@ -77,11 +79,24 @@ app.include_router(platform_usuarios_router)
 
 STATIC_ADMIN_DIR = Path(__file__).resolve().parent / "static" / "admin"
 STATIC_PUBLIC_DIR = Path(__file__).resolve().parent / "static" / "public"
+STATIC_OMNI_DIR = Path(__file__).resolve().parent / "static" / "omni"
 app.mount(
     "/admin-assets",
     StaticFiles(directory=STATIC_ADMIN_DIR),
     name="admin-assets",
 )
+
+
+app.mount(
+    "/omni-assets",
+    StaticFiles(directory=STATIC_OMNI_DIR),
+    name="omni-assets",
+)
+
+
+@app.get("/omni", include_in_schema=False)
+def omni_page():
+    return FileResponse(STATIC_OMNI_DIR / "index.html")
 
 
 @app.get("/login", include_in_schema=False)

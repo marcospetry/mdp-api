@@ -5,7 +5,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.orm import Session
 
-from app.security.dependencies import get_authorized_tenant_db as get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db, require_backoffice_context
 from app.security.dependencies import require_tenant_context, get_current_context
 from app.models.diagnostico import (
     CategoriaDiagnostico,
@@ -32,7 +32,7 @@ from app.schemas.diagnostico import (
 router = APIRouter(
     prefix="/api/diagnostico",
     tags=["Diagnóstico - Catálogo"],
-    dependencies=[Depends(require_tenant_context)],
+    dependencies=[Depends(require_backoffice_context)],
 )
 
 

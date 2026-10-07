@@ -35,13 +35,14 @@ from app.security.dependencies import (
     get_current_context,
     require_empresa_access,
     require_tenant_context,
+    require_backoffice_context,
 )
 
 
 router = APIRouter(
     prefix="/api/diagnostico/aplicacoes",
     tags=["Diagnóstico - Aplicações"],
-    dependencies=[Depends(require_tenant_context)],
+    dependencies=[Depends(require_backoffice_context)],
 )
 
 

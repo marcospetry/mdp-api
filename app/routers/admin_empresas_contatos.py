@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.security.dependencies import get_authorized_tenant_db as get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db, require_backoffice_context
 from app.models.contato import Contato
 from app.models.empresa import Empresa
 from app.models.interacao import Interacao
@@ -26,7 +26,7 @@ from app.security.dependencies import get_current_context, require_empresa_acces
 router = APIRouter(
     prefix="/api/admin",
     tags=["Admin - Empresas e Contatos"],
-    dependencies=[Depends(require_tenant_context)],
+    dependencies=[Depends(require_backoffice_context)],
 )
 
 SEM_EMPRESA_SLUG = "sem-empresa"

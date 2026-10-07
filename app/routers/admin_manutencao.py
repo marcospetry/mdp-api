@@ -3,12 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.security.dependencies import get_authorized_tenant_db as get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db, require_backoffice_context
 from app.models.manutencao import OrigemContato, TipoInteracao
 from app.schemas.manutencao import CatalogoCreate, CatalogoResponse, CatalogoStatus, CatalogoUpdate
 from app.security.dependencies import require_tenant_context, get_current_context, require_empresa_access
 
-router = APIRouter(prefix="/api/admin", tags=["Admin - Manutenção"], dependencies=[Depends(require_tenant_context)])
+router = APIRouter(prefix="/api/admin", tags=["Admin - Manutenção"], dependencies=[Depends(require_backoffice_context)])
 
 def _listar(db, model, empresa_id, context):
     require_empresa_access(context, empresa_id)

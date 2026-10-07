@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.security.dependencies import get_authorized_tenant_db as get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db, require_backoffice_context
 from app.models.auth import PerfilPermissao, UsuarioEmpresa
 from app.models.empresa import Empresa
 from app.models.organizacao import Area, TipoUnidade, UnidadeEmpresa, UsuarioArea, UsuarioUnidade
@@ -15,7 +15,7 @@ from app.schemas.organizacao import (
 )
 from app.security.dependencies import get_current_context, require_area_access, require_empresa_access, require_unidade_access, require_tenant_context
 
-router = APIRouter(dependencies=[Depends(require_tenant_context)], prefix="/api/admin", tags=["Admin - Organização"])
+router = APIRouter(dependencies=[Depends(require_backoffice_context)], prefix="/api/admin", tags=["Admin - Organização"])
 
 
 def _commit(db: Session, detail="Conflito de integridade nos dados."):

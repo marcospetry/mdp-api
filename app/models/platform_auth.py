@@ -19,6 +19,9 @@ class PlatformUsuario(Base):
     mfa_habilitado = Column(Boolean, nullable=False, default=False)
     mfa_secret_enc = Column(Text, nullable=True)
     mfa_confirmado_em = Column(DateTime(timezone=True), nullable=True)
+    # Migration platform 010: excecao controlada de MFA (App Review da Meta) e validade de acesso.
+    mfa_dispensado = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    acesso_expira_em = Column(DateTime(timezone=True), nullable=True)
     senha_alterada_em = Column(DateTime(timezone=True), nullable=True)
     tentativas_login = Column(Integer, nullable=False, default=0)
     bloqueado_ate = Column(DateTime(timezone=True), nullable=True)

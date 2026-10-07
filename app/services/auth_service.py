@@ -17,6 +17,24 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+def acesso_expirado(usuario: PlatformUsuario, now: datetime | None = None) -> bool:
+    """True se o usuario tem validade de acesso (acesso_expira_em) e ela ja venceu."""
+    return bool(usuario.acesso_expira_em and usuario.acesso_expira_em <= (now or utcnow()))
+
+
+def mfa_dispensa_valida(usuario: PlatformUsuario, now: datetime | None = None) -> bool:
+    """Excecao de MFA (ex.: usuario de App Review da Meta). Nunca vale para SUPERADMIN,
+    exige validade futura e so existe para quem nao tem MFA habilitado."""
+    now = now or utcnow()
+    return bool(
+        usuario.mfa_dispensado
+        and not usuario.is_superadmin
+        and not usuario.mfa_habilitado
+        and usuario.acesso_expira_em
+        and usuario.acesso_expira_em > now
+    )
+
+
 def normalize_refresh_token(token: str) -> str:
     return (token or "").strip()
 
@@ -106,6 +124,8 @@ def rotate_refresh_session(platform_db: Session, refresh_token: str):
     ).first()
     if not usuario:
         return None, None, None, "USER_INVALID"
+    if acesso_expirado(usuario, now):
+        return None, None, None, "ACCESS_EXPIRED"
     if sessao.contexto_tipo == "PLATAFORMA":
         if not usuario.is_superadmin:
             return None, None, None, "PLATFORM_ACCESS_REVOKED"

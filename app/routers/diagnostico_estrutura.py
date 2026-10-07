@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
-from app.security.dependencies import get_authorized_tenant_db as get_db
+from app.security.dependencies import get_authorized_tenant_db as get_db, require_backoffice_context
 from app.models.diagnostico import (
     Diagnostico,
     FaixaAvaliacaoNumero,
@@ -29,7 +29,7 @@ from app.security.dependencies import require_tenant_context, get_current_contex
 router = APIRouter(
     prefix="/api/diagnostico",
     tags=["Diagnóstico - Estrutura"],
-    dependencies=[Depends(require_tenant_context)],
+    dependencies=[Depends(require_backoffice_context)],
 )
 
 TIPOS_RESPOSTA = ["ESCOLHA_UNICA", "MULTIPLA_ESCOLHA", "NUMERO", "TEXTO_CURTO"]
