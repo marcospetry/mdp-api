@@ -61,6 +61,7 @@ class FakeMeta:
         self.calls: list[dict] = []
         self.me = {"user_id": IG_DEMO, "username": "mdpdemo", "name": "MDP Demo", "account_type": "BUSINESS"}
         self.permissions = ",".join(meta_instagram.SCOPES)
+        self.flat_token = False
         self.fail: dict[str, Exception] = {}
         self.media = [{"id": "M1", "caption": "Spring promotion, book this week", "permalink": "https://instagram.com/p/AAA"}]
         self.comments = {"M1": []}
@@ -75,7 +76,8 @@ class FakeMeta:
         if url == meta_instagram.OAUTH_TOKEN:
             if data["code"] == "BADCODE":
                 raise meta_instagram.MetaApiError(400, "400", "Matching code was not found or was already used")
-            return {"data": [{"access_token": "SHORTTOKEN-SECRET", "user_id": "appscoped999", "permissions": self.permissions}]}
+            item = {"access_token": "SHORTTOKEN-SECRET", "user_id": "appscoped999", "permissions": self.permissions}
+            return item if self.flat_token else {"data": [item]}
         if path.endswith("/refresh_access_token"):
             self.n += 1
             return {"access_token": f"REFRESHED-{self.n}", "token_type": "bearer", "expires_in": 5183944}
@@ -231,6 +233,19 @@ def main():
         fake.permissions = "instagram_business_basic,instagram_business_manage_messages"
         r, qs = connect(H)
         check("C11 permissao faltando (sem comentarios) e recusada", callback(code="GOODCODE", state=qs["state"][0]).headers["location"] == "/omni?ig_error=permissions")
+        check("C11b a recusa por permissao registra os NOMES recebidos no log (sem segredo), para diagnostico",
+              any("ig_oauth_permissoes_recebidas" in l and "instagram_business_basic" in l and "manage_comments" not in l for l in logcap.lines))
+        formatos = {"texto com virgulas": ",".join(meta_instagram.SCOPES), "lista": list(meta_instagram.SCOPES), "texto com espacos": " ".join(meta_instagram.SCOPES),
+                    "lista escrita como texto": str(list(meta_instagram.SCOPES)), "nomes antigos": "business_basic,business_manage_messages,business_manage_comments"}
+        falhou = []
+        for nome, valor in formatos.items():
+            for flat in (False, True):
+                fake.permissions, fake.flat_token = valor, flat
+                got = meta_instagram.exchange_code("GOODCODE", "https://api.test/x")["permissions"].split(",")
+                if sorted(got) != sorted(meta_instagram.SCOPES):
+                    falhou.append(f"{nome}/{'plano' if flat else 'data'}")
+        fake.permissions, fake.flat_token = ",".join(meta_instagram.SCOPES), False
+        check("C11c as permissoes sao lidas em qualquer formato (texto, lista, espacos, nomes antigos; resposta plana ou em 'data')", not falhou, ", ".join(falhou))
         fake.permissions = ",".join(meta_instagram.SCOPES); fake.me["account_type"] = "PERSONAL"
         r, qs = connect(H)
         check("C12 conta pessoal (nao profissional) e recusada", callback(code="GOODCODE", state=qs["state"][0]).headers["location"] == "/omni?ig_error=not_professional")

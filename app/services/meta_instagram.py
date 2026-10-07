@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 from typing import Any
 from urllib.parse import urlencode
 
@@ -85,6 +86,21 @@ def build_authorize_url(redirect_uri: str, state: str) -> str:
     return f"{OAUTH_AUTHORIZE}?{urlencode(query)}"
 
 
+def parse_permissions(value) -> list[str]:
+    """Aceita as formas em que a Meta pode devolver as permissoes: texto com virgulas, com espacos, lista, lista como texto,
+    e os nomes antigos (business_basic...). Devolve sempre nomes no padrao instagram_business_*."""
+    items = [str(v) for v in value] if isinstance(value, (list, tuple, set)) else re.split(r"[,\s]+", str(value or ""))
+    names = []
+    for item in items:
+        name = item.strip().strip("[]'\"").strip()
+        if not name:
+            continue
+        if name.startswith("business_"):
+            name = "instagram_" + name
+        names.append(name)
+    return sorted(set(names))
+
+
 def exchange_code(code: str, redirect_uri: str) -> dict:
     body = http_json("POST", OAUTH_TOKEN, data={
         "client_id": settings.instagram_app_id, "client_secret": settings.instagram_app_secret,
@@ -93,7 +109,7 @@ def exchange_code(code: str, redirect_uri: str) -> dict:
     item = _first(body)
     if not item.get("access_token"):
         raise MetaApiError(200, "no_token", "resposta sem access_token")
-    return {"access_token": item["access_token"], "user_id": str(item.get("user_id", "")), "permissions": str(item.get("permissions", ""))}
+    return {"access_token": item["access_token"], "user_id": str(item.get("user_id", "")), "permissions": ",".join(parse_permissions(item.get("permissions")))}
 
 
 def to_long_lived(short_token: str) -> dict:

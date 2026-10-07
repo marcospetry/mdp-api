@@ -171,8 +171,10 @@ def instagram_callback(request: Request, code: str | None = None, state: str | N
         return back("exchange")
     if me["account_type"].lower() not in meta_instagram.PROFESSIONAL_TYPES:
         return back("not_professional")
-    granted = {p.strip() for p in short["permissions"].split(",") if p.strip()}
+    granted = {p for p in short["permissions"].split(",") if p}
     if granted and not set(meta_instagram.SCOPES) <= granted:
+        # nomes de permissao nao sao segredo: registrar ajuda a diagnosticar diferencas de formato da Meta
+        logger.warning("ig_oauth_permissoes_recebidas=%s", sorted(granted))
         return back("permissions")
     db = PlatformSessionLocal()
     try:
