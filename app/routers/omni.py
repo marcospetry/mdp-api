@@ -185,7 +185,8 @@ def instagram_callback(request: Request, code: str | None = None, state: str | N
             subscribed, webhook_error = False, exc.code
         omni_connections.upsert_instagram_connection(
             db, tenant_id=claims["tid"], user_id=claims["uid"], me=me, long_token=long_["access_token"], expires_in=long_["expires_in"],
-            permissions=short["permissions"] or ",".join(meta_instagram.SCOPES), subscribed=subscribed, webhook_error=webhook_error)
+            permissions=short["permissions"] or ",".join(meta_instagram.SCOPES), subscribed=subscribed, webhook_error=webhook_error,
+            app_user_id=short.get("user_id") or None)
     except omni_connections.AccountAlreadyConnected:
         return back("already_connected")
     except omni_connections.EndpointTypeMissing:

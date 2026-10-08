@@ -78,3 +78,14 @@ def known_post(db: Session, endpoint_id, media_id: str) -> dict | None:
                              WHERE endpoint_id = :ep AND post_external_id = :m AND (post_resumo IS NOT NULL OR post_permalink IS NOT NULL) LIMIT 1"""),
                      {"ep": str(endpoint_id), "m": media_id}).mappings().first()
     return dict(row) if row else None
+
+
+def delete_endpoint_data(db: Session, endpoint_id) -> dict:
+    """Exclusao de dados (pedido da Meta): apaga TODAS as conversas, mensagens e comentarios de um canal no banco do tenant.
+
+    As mensagens saem junto das conversas (ON DELETE CASCADE). Devolve so contagens.
+    """
+    comments = db.execute(text("DELETE FROM omni_comentarios WHERE endpoint_id = :ep"), {"ep": str(endpoint_id)}).rowcount
+    convs = db.execute(text("DELETE FROM omni_conversas WHERE endpoint_id = :ep"), {"ep": str(endpoint_id)}).rowcount
+    db.commit()
+    return {"conversas": convs, "comentarios": comments}

@@ -54,8 +54,13 @@ def get_connection(db: Session, tenant_id, provider: str = "INSTAGRAM") -> dict 
 
 
 def upsert_instagram_connection(db: Session, *, tenant_id, user_id, me: dict, long_token: str, expires_in: int,
-                                permissions: str, subscribed: bool, webhook_error: str | None = None) -> str:
-    """Grava o canal e a conexao. Devolve o endpoint_id."""
+                                permissions: str, subscribed: bool, webhook_error: str | None = None,
+                                app_user_id: str | None = None) -> str:
+    """Grava o canal e a conexao. Devolve o endpoint_id.
+
+    app_user_id = user_id devolvido na troca do codigo (ID do usuario NO APP). Fica em metadados para os callbacks
+    de desautorizacao e de exclusao de dados da Meta acharem o canal.
+    """
     ig_id, username = me["user_id"], (me.get("username") or "")
     now = utcnow()
     tipo = db.execute(text("SELECT id FROM tipos_endpoint WHERE codigo = 'INSTAGRAM'")).scalar()
@@ -88,9 +93,11 @@ def upsert_instagram_connection(db: Session, *, tenant_id, user_id, me: dict, lo
                            WHERE id = :id"""), {"ig": ig_id, "u": username or None, "n": now, "id": str(ep)})
     else:
         base = ("INSTAGRAM_" + re.sub(r"[^A-Z0-9]", "_", (username or ig_id).upper()))[:90]
-        codigo = base
-        if db.execute(text("SELECT 1 FROM tenant_endpoints WHERE tenant_id = :t AND codigo = :c"), {"t": str(tenant_id), "c": codigo}).scalar():
-            codigo = f"{base}_{ig_id[-4:]}"
+        # codigo unico no tenant: canais antigos (inativos, p.ex. apos um pedido de exclusao) continuam ocupando o codigo deles
+        codigo, n = base, 1
+        while db.execute(text("SELECT 1 FROM tenant_endpoints WHERE tenant_id = :t AND codigo = :c"), {"t": str(tenant_id), "c": codigo}).scalar():
+            n += 1
+            codigo = f"{base}_{ig_id[-4:]}" if n == 2 else f"{base}_{ig_id[-4:]}_{n - 1}"
         ep = db.execute(text("""INSERT INTO tenant_endpoints (tenant_id, codigo, nome, identificador_externo, identificador_publico, url, tipo_endpoint_id)
                                 VALUES (:t, :c, :nome, :ig, :u, :url, :tipo) RETURNING id"""),
                         {"t": str(tenant_id), "c": codigo, "nome": (me.get("name") or username or f"Instagram {ig_id}")[:150], "ig": ig_id,
@@ -100,6 +107,8 @@ def upsert_instagram_connection(db: Session, *, tenant_id, user_id, me: dict, lo
     # 3) conexao tecnica (1 por canal): token sempre criptografado
     escopos = sorted({p.strip() for p in permissions.split(",") if p.strip()})
     meta = {"name": me.get("name"), "username": username, "account_type": me.get("account_type")}
+    if app_user_id:
+        meta["app_user_id"] = str(app_user_id)
     db.execute(text("""
         INSERT INTO canal_conexoes (tenant_id, endpoint_id, tipo_conexao, status, escopos, token_tipo, token_enc, token_key_version,
                token_expira_em, renovar_em, webhook_assinado, webhook_campos, metadados, conectado_por_usuario_id, conectado_em)
@@ -132,6 +141,34 @@ def revoke(db: Session, tenant_id, provider: str = "INSTAGRAM") -> bool:
     """), {"n": now, "t": str(tenant_id), "p": provider}).rowcount
     db.commit()
     return n > 0
+
+
+def revoke_endpoint(db: Session, endpoint_id) -> bool:
+    """Revoga a conexao de UM canal (callbacks da Meta). Apaga o token; True se havia algo a revogar."""
+    now = utcnow()
+    n = db.execute(text("""
+        UPDATE canal_conexoes SET status = 'REVOGADO', token_enc = NULL, webhook_assinado = FALSE,
+               desconectado_em = :n, updated_at = :n
+         WHERE endpoint_id = :ep AND status <> 'REVOGADO'
+    """), {"n": now, "ep": str(endpoint_id)}).rowcount
+    db.commit()
+    return n > 0
+
+
+def anonymize_endpoint(db: Session, endpoint_id) -> None:
+    """Exclusao de dados: inativa o canal e remove nome, @usuario, URL e IDs da conta; limpa os metadados da conexao.
+
+    O canal nao e apagado (outras tabelas podem referencia-lo); fica inativo e sem dados pessoais. Uma nova conexao da mesma
+    conta cria um canal novo.
+    """
+    now = utcnow()
+    db.execute(text("""
+        UPDATE tenant_endpoints SET ativo = FALSE, nome = 'Removed channel', identificador_externo = NULL,
+               identificador_publico = NULL, url = NULL, updated_at = :n WHERE id = :ep
+    """), {"n": now, "ep": str(endpoint_id)})
+    db.execute(text("UPDATE canal_conexoes SET metadados = '{}'::jsonb, escopos = '[]'::jsonb, updated_at = :n WHERE endpoint_id = :ep"),
+               {"n": now, "ep": str(endpoint_id)})
+    db.commit()
 
 
 def get_credentials(db: Session, endpoint_id) -> dict | None:
