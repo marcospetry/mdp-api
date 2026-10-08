@@ -29,14 +29,19 @@ MAX_BODY_BYTES = 20_000
 SITE = "https://mdpconsultoria.com.br"
 
 
-def _verified_user_id(raw: bytes) -> str:
+def _verified_user_id(raw: bytes, rota: str, content_type: str | None) -> str:
     secrets_list = meta_privacy.app_secrets()
     if not secrets_list:
         raise HTTPException(status_code=404, detail="Not found")
     if len(raw) > MAX_BODY_BYTES:
         raise HTTPException(status_code=413, detail="Payload too large")
-    payload = meta_privacy.parse_signed_request(meta_privacy.extract_signed_request(raw), secrets_list)
+    signed = meta_privacy.extract_signed_request(raw)
+    payload = meta_privacy.parse_signed_request(signed, secrets_list)
     if payload is None:
+        # so o motivo e nomes de campos: nunca o signed_request, o corpo nem segredos
+        diag = meta_privacy.diagnose_signed_request(signed, secrets_list)
+        logger.warning("meta_privacy_recusado rota=%s %s corpo_bytes=%d content_type=%s", rota,
+                       " ".join(f"{k}={v}" for k, v in diag.items()), len(raw), (content_type or "")[:60])
         raise HTTPException(status_code=403, detail="Invalid signed_request")
     return payload["user_id"]
 
@@ -59,7 +64,7 @@ def _delete_data(meta_user_id: str) -> dict:
 
 @router.post("/api/meta/deauthorize", include_in_schema=False)
 async def deauthorize(request: Request):
-    user_id = _verified_user_id(await request.body())
+    user_id = _verified_user_id(await request.body(), "deauthorize", request.headers.get("content-type"))
     try:
         result = await run_in_threadpool(_deauthorize, user_id)
     except (SQLAlchemyError, HTTPException):
@@ -71,7 +76,7 @@ async def deauthorize(request: Request):
 
 @router.post("/api/meta/data-deletion", include_in_schema=False)
 async def data_deletion(request: Request):
-    user_id = _verified_user_id(await request.body())
+    user_id = _verified_user_id(await request.body(), "data-deletion", request.headers.get("content-type"))
     try:
         result = await run_in_threadpool(_delete_data, user_id)
     except (SQLAlchemyError, HTTPException):

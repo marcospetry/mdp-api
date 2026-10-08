@@ -71,6 +71,35 @@ def parse_signed_request(signed_request: str | None, secrets_list: list[str]) ->
     return None
 
 
+def diagnose_signed_request(signed_request: str | None, secrets_list: list[str]) -> dict:
+    """Motivo (curto e seguro) pelo qual um signed_request foi recusado. So devolve NOMES de campos, nunca valores nem segredos.
+
+    Nao altera a regra de aceite: serve apenas para o log quando a Meta chama e recebemos 403.
+    """
+    if not signed_request:
+        return {"motivo": "sem_campo"}
+    if signed_request.count(".") != 1:
+        return {"motivo": "formato", "partes": signed_request.count(".") + 1}
+    sig_part, payload_part = signed_request.split(".", 1)
+    try:
+        received = _b64url_decode(sig_part)
+        payload = json.loads(_b64url_decode(payload_part))
+    except (binascii.Error, ValueError, UnicodeDecodeError):
+        return {"motivo": "base64_ou_json"}
+    if not isinstance(payload, dict):
+        return {"motivo": "payload_nao_objeto"}
+    info = {"chaves": sorted(str(k) for k in payload)[:12], "algoritmo": str(payload.get("algorithm"))[:20],
+            "assinatura_bytes": len(received), "segredos": len(secrets_list)}
+    if str(payload.get("algorithm", "")).upper() != "HMAC-SHA256":
+        return {"motivo": "algoritmo", **info}
+    if not str(payload.get("user_id") or "").strip():
+        return {"motivo": "sem_user_id", **info}
+    for secret in secrets_list:
+        if hmac.compare_digest(hmac.new(secret.encode(), payload_part.encode(), hashlib.sha256).digest(), received):
+            return {"motivo": "ok", **info}
+    return {"motivo": "assinatura", **info}
+
+
 def find_channels(db: Session, meta_user_id: str) -> list[dict]:
     """Canais ativos (qualquer status de conexao) ligados a este user_id da Meta.
 

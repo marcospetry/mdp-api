@@ -214,6 +214,23 @@ def main():
         check("B5 pedidos recusados nao gravam nada", len(pedidos()) == n_antes)
         check("B6 os callbacks respondem com OMNI_META_ENABLED desligado", settings.omni_meta_enabled is False)
 
+        print("\n[C2] Diagnostico da recusa no log")
+        n0 = len(logcap.lines)
+        sr_errado = signed_request(payload_for(APP_UID), "outro-segredo")
+        post_form("/api/meta/deauthorize", sr_errado)
+        post_form("/api/meta/data-deletion", None, raw=b"foo=bar")
+        post_form("/api/meta/deauthorize", "semponto")
+        post_form("/api/meta/deauthorize", signed_request({**payload_for(APP_UID), "algorithm": "HMAC-SHA1"}))
+        novas = "\n".join(logcap.lines[n0:])
+        check("C2.1 assinatura errada: motivo=assinatura com nomes de campos e rota", "motivo=assinatura" in novas and "chaves=['algorithm', 'issued_at', 'user_id']" in novas and "rota=deauthorize" in novas, novas[:200])
+        check("C2.2 sem signed_request: motivo=sem_campo (rota data-deletion)", "motivo=sem_campo" in novas and "rota=data-deletion" in novas)
+        check("C2.3 formato invalido: motivo=formato", "motivo=formato" in novas)
+        check("C2.4 algoritmo diferente: motivo=algoritmo", "motivo=algoritmo" in novas)
+        check("C2.5 o log nao traz o signed_request, o user_id nem segredos", sr_errado not in novas and APP_UID not in novas and "outro-segredo" not in novas and SECRET_IG not in novas)
+        check("C2.6 diagnose nao aceita nada que parse recusa",
+              meta_privacy.diagnose_signed_request(signed_request(payload_for(APP_UID)), S)["motivo"] == "ok"
+              and meta_privacy.diagnose_signed_request(sr_errado, S)["motivo"] == "assinatura")
+
         # ------------------------------------------------------------------ D. Connect grava o ID do usuario no app
         print("\n[D] Connect grava app_user_id")
         ep1 = connect_demo()
