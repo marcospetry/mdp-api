@@ -1,4 +1,4 @@
-"""Gravacao dos eventos recebidos do Instagram no banco do TENANT (conversas, mensagens, comentarios).
+"""Gravacao dos eventos recebidos do Instagram e do Facebook no banco do TENANT (conversas, mensagens, comentarios).
 
 Idempotente: a Meta reenvia eventos que falham, entao toda gravacao ignora duplicatas (mid / id do comentario).
 Nunca registra o conteudo das mensagens em log.
@@ -24,14 +24,15 @@ def to_datetime(value) -> datetime:
     return datetime.now(timezone.utc)
 
 
-def store_incoming_dm(db: Session, *, endpoint_id, sender_id: str, mid: str, body: str | None, tipo: str, ts: datetime) -> dict:
+def store_incoming_dm(db: Session, *, endpoint_id, sender_id: str, mid: str, body: str | None, tipo: str, ts: datetime,
+                      canal: str = "INSTAGRAM") -> dict:
     """Grava uma mensagem recebida. Devolve {inserted, conversa_id, needs_profile}."""
     conv = db.execute(text("""
         INSERT INTO omni_conversas (canal, endpoint_id, participante_externo_id, ultima_mensagem_em, ultima_mensagem_cliente_em, nao_lidas)
-        VALUES ('INSTAGRAM', :ep, :sid, :ts, :ts, 0)
+        VALUES (:canal, :ep, :sid, :ts, :ts, 0)
         ON CONFLICT (endpoint_id, participante_externo_id) DO UPDATE SET status = 'ABERTA'
         RETURNING id, (participante_nome IS NULL AND participante_usuario IS NULL) AS needs_profile
-    """), {"ep": str(endpoint_id), "sid": sender_id, "ts": ts}).mappings().first()
+    """), {"canal": canal, "ep": str(endpoint_id), "sid": sender_id, "ts": ts}).mappings().first()
     inserted = db.execute(text("""
         INSERT INTO omni_mensagens (conversa_id, direcao, external_message_id, tipo, texto, status_envio, ocorrida_em)
         VALUES (:cv, 'ENTRADA', :mid, :tipo, :texto, 'RECEBIDA', :ts)
@@ -59,14 +60,14 @@ def set_profile(db: Session, conversa_id: str, name: str | None, username: str |
 
 def store_comment(db: Session, *, endpoint_id, comment_id: str, media_id: str | None, parent_id: str | None, body: str | None,
                   author_id: str | None, author_username: str | None, ts: datetime,
-                  post_resumo: str | None = None, post_permalink: str | None = None) -> bool:
+                  post_resumo: str | None = None, post_permalink: str | None = None, canal: str = "INSTAGRAM") -> bool:
     row = db.execute(text("""
         INSERT INTO omni_comentarios (canal, endpoint_id, external_comment_id, parent_external_id, post_external_id, post_resumo, post_permalink,
                                       origem, autor_externo_id, autor_nome, autor_usuario, texto, ocorrido_em)
-        VALUES ('INSTAGRAM', :ep, :cid, :parent, :media, :resumo, :link, 'EXTERNO', :aid, :nome, :usr, :texto, :ts)
+        VALUES (:canal, :ep, :cid, :parent, :media, :resumo, :link, 'EXTERNO', :aid, :nome, :usr, :texto, :ts)
         ON CONFLICT (endpoint_id, external_comment_id) DO NOTHING
         RETURNING id
-    """), {"ep": str(endpoint_id), "cid": comment_id, "parent": parent_id, "media": media_id,
+    """), {"canal": canal, "ep": str(endpoint_id), "cid": comment_id, "parent": parent_id, "media": media_id,
            "resumo": (post_resumo or None) and post_resumo[:300], "link": post_permalink, "aid": author_id,
            "nome": author_username, "usr": author_username, "texto": body, "ts": ts}).first()
     db.commit()

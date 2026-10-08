@@ -18,6 +18,7 @@ from app.routers.auth import router as auth_router
 from app.routers.contatos import router as contatos_router
 from app import logging_filters
 from app.routers.meta_instagram_webhook import router as meta_instagram_webhook_router
+from app.routers.meta_facebook_webhook import router as meta_facebook_webhook_router
 from app.routers.omni import router as omni_router
 from app.routers.meta_privacy import router as meta_privacy_router
 from pathlib import Path
@@ -65,6 +66,7 @@ app.include_router(contatos_router)
 app.include_router(auth_router)
 app.include_router(omni_router)
 app.include_router(meta_instagram_webhook_router)
+app.include_router(meta_facebook_webhook_router)
 app.include_router(meta_privacy_router)
 app.include_router(diagnostico_catalogo_router)
 app.include_router(diagnostico_formularios_router)

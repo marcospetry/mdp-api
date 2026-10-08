@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import PlatformSessionLocal, get_platform_db
 from app.security.dependencies import get_authorized_tenant_db, require_permission
-from app.services import meta_instagram, omni_connections, omni_sync
+from app.services import meta_facebook, meta_instagram, omni_connections, omni_sync
 from app.services.auth_service import utcnow
 from app.services.omni_send import send_comment_reply, send_direct_message
 
@@ -115,25 +115,29 @@ OAUTH_COOKIE_PATH = "/api/omni/oauth"
 STATE_TTL = 600
 
 
-def _meta_ready() -> bool:
-    return bool(settings.omni_meta_enabled and settings.instagram_app_id and settings.instagram_app_secret
-                and settings.omni_connection_encryption_key and settings.omni_public_base_url)
+def _meta_ready(provider: str = "INSTAGRAM") -> bool:
+    common = settings.omni_meta_enabled and settings.omni_connection_encryption_key and settings.omni_public_base_url
+    if provider == "FACEBOOK":
+        return bool(common and settings.facebook_app_id and meta_facebook.app_secret() and settings.facebook_login_config_id)
+    return bool(common and settings.instagram_app_id and settings.instagram_app_secret)
 
 
-def _redirect_uri() -> str:
-    return settings.omni_public_base_url.rstrip("/") + "/api/omni/oauth/instagram/callback"
+def _redirect_uri(provider: str = "INSTAGRAM") -> str:
+    return settings.omni_public_base_url.rstrip("/") + f"/api/omni/oauth/{provider.lower()}/callback"
 
 
 @router.post("/integrations/{provider}/connect")
 def connect_integration(provider: str, context=Depends(require_permission("OMNI_INTEGRACOES"))):
     provider = _provider_or_404(provider)
-    if provider != "INSTAGRAM" or not _meta_ready():
+    if not _meta_ready(provider):
         raise HTTPException(status_code=501, detail="Connecting channels is not enabled yet.")
     nonce = secrets.token_urlsafe(24)
+    purpose = "fb_oauth" if provider == "FACEBOOK" else "ig_oauth"
     state = jwt.encode(
-        {"purpose": "ig_oauth", "tid": str(context["tenant_id"]), "uid": str(context["usuario"].id), "nonce": nonce,
+        {"purpose": purpose, "tid": str(context["tenant_id"]), "uid": str(context["usuario"].id), "nonce": nonce,
          "exp": utcnow() + timedelta(seconds=STATE_TTL)}, settings.secret_key, algorithm=settings.jwt_algorithm)
-    resp = JSONResponse({"authorization_url": meta_instagram.build_authorize_url(_redirect_uri(), state)})
+    api = meta_facebook if provider == "FACEBOOK" else meta_instagram
+    resp = JSONResponse({"authorization_url": api.build_authorize_url(_redirect_uri(provider), state)})
     # o nonce prende o fluxo a ESTE navegador (protege contra conectar a conta de outra pessoa ao seu tenant)
     resp.set_cookie(OAUTH_COOKIE, nonce, max_age=STATE_TTL, httponly=True, samesite="lax", path=OAUTH_COOKIE_PATH,
                     secure=settings.omni_public_base_url.startswith("https://"))
@@ -197,14 +201,71 @@ def instagram_callback(request: Request, code: str | None = None, state: str | N
     return back("connected", key="ig", extra="" if subscribed else "&ig_warn=webhook")
 
 
+@router.get("/oauth/facebook/callback", include_in_schema=False)
+def facebook_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    def back(result: str, key: str = "fb_error", extra: str = ""):
+        resp = RedirectResponse(f"/omni?{key}={result}{extra}", status_code=303)
+        resp.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
+        return resp
+
+    if not _meta_ready("FACEBOOK"):
+        return back("disabled")
+    if error:
+        return back("denied")
+    try:
+        claims = jwt.decode(state or "", settings.secret_key, algorithms=[settings.jwt_algorithm])
+        if claims.get("purpose") != "fb_oauth":
+            raise jwt.InvalidTokenError("purpose")
+    except jwt.PyJWTError:
+        return back("state")
+    cookie = request.cookies.get(OAUTH_COOKIE) or ""
+    if not cookie or not hmac.compare_digest(cookie.encode(), str(claims.get("nonce", "")).encode()):
+        return back("state")
+    if not code:
+        return back("denied")
+    try:
+        short = meta_facebook.exchange_code(code, _redirect_uri("FACEBOOK"))
+        user_token = meta_facebook.to_long_lived(short["access_token"])["access_token"]
+        me = meta_facebook.get_me(user_token)
+        granted = meta_facebook.granted_permissions(user_token)
+        if not set(meta_facebook.SCOPES) <= granted:
+            # nomes de permissao nao sao segredo: registrar ajuda a diagnosticar diferencas de formato da Meta
+            logger.warning("fb_oauth_permissoes_recebidas=%s", sorted(granted))
+            return back("permissions")
+        pages = meta_facebook.eligible_pages(meta_facebook.list_pages(user_token))
+    except meta_facebook.MetaApiError as exc:
+        logger.warning("fb_oauth_falhou code=%s", exc.code)
+        return back("exchange")
+    if not pages:
+        return back("no_page")
+    page = pages[0]  # uma Pagina por workspace nesta versao; se vierem varias, conecta a primeira e avisa
+    db = PlatformSessionLocal()
+    try:
+        subscribed, webhook_error = True, None
+        try:
+            meta_facebook.subscribe_webhooks(page["access_token"], str(page["id"]))
+        except meta_facebook.MetaApiError as exc:
+            subscribed, webhook_error = False, exc.code
+        omni_connections.upsert_facebook_connection(
+            db, tenant_id=claims["tid"], user_id=claims["uid"], page=page, page_token=page["access_token"],
+            permissions=",".join(meta_facebook.SCOPES), subscribed=subscribed, webhook_error=webhook_error, app_user_id=me["id"])
+    except omni_connections.AccountAlreadyConnected:
+        return back("already_connected")
+    except omni_connections.EndpointTypeMissing:
+        return back("setup")
+    finally:
+        db.close()
+    logger.info("fb_conectado tenant=%s page_id=%s paginas=%d webhook=%s", claims["tid"], page["id"], len(pages), "ok" if subscribed else "falhou")
+    warn = "&fb_warn=webhook" if not subscribed else ("&fb_warn=pages" if len(pages) > 1 else "")
+    return back("connected", key="fb", extra=warn)
+
+
 @router.delete("/integrations/{provider}")
 def disconnect_integration(provider: str, context=Depends(require_permission("OMNI_INTEGRACOES")),
                            platform_db: Session = Depends(get_platform_db)):
     provider = _provider_or_404(provider)
-    if provider != "INSTAGRAM":
-        raise HTTPException(status_code=501, detail="Disconnecting channels is not enabled yet.")
-    revoked = omni_connections.revoke(platform_db, context["tenant_id"], "INSTAGRAM")
-    logger.info("ig_desconectado tenant=%s revogado=%s", context["tenant_id"], revoked)
+    revoked = omni_connections.revoke(platform_db, context["tenant_id"], provider)
+    logger.info("canal_desconectado provider=%s tenant=%s revogado=%s", provider.lower(), context["tenant_id"], revoked)
     return {"disconnected": revoked}
 
 
@@ -399,9 +460,17 @@ def list_comments(
 @router.post("/comments/sync")
 def sync_comments(context=Depends(require_permission("OMNI_COMENTARIOS")), db: Session = Depends(get_authorized_tenant_db),
                   platform_db: Session = Depends(get_platform_db)):
-    if not _meta_ready():
-        return {"new": 0, "skipped": True}
-    return omni_sync.sync_instagram_comments(platform_db, db, context["tenant_id"])
+    total, ran, err = 0, False, None
+    if _meta_ready("INSTAGRAM"):
+        res = omni_sync.sync_instagram_comments(platform_db, db, context["tenant_id"])
+        total, ran, err = total + res["new"], ran or not res.get("skipped"), err or res.get("error")
+    if _meta_ready("FACEBOOK"):
+        res = omni_sync.sync_facebook_comments(platform_db, db, context["tenant_id"])
+        total, ran, err = total + res["new"], ran or not res.get("skipped"), err or res.get("error")
+    out = {"new": total, "skipped": not ran}
+    if err:
+        out["error"] = err
+    return out
 
 
 @router.post("/comments/{comment_id}/reply", status_code=201)

@@ -31,7 +31,7 @@
       ig_desc: "Receive direct messages and comments on your posts, and reply from MDP Omni. You will sign in with Instagram.",
       fb_desc: "Receive Messenger conversations and comments on your Page's posts, and reply from MDP Omni. You will sign in with Facebook and choose which Page to connect.",
       connect_ig: "Connect Instagram", connect_fb: "Connect Facebook Page", reconnect: "Reconnect", disconnect: "Disconnect",
-      access_granted: "Access granted", ig_scopes: "profile, direct messages, comments", fb_scopes: "Page list, messages, comments", connection: "Connection", renews: "renews automatically",
+      access_granted: "Access granted", ig_scopes: "profile, direct messages, comments", fb_scopes: "Page list, messages, comments", connection: "Connection", renews: "renews automatically", no_expiry: "stays active until access is removed",
       you_choose: "You choose", you_choose_v: "the account and what to share", control: "You stay in control", control_v: "disconnect at any time",
       int_foot: "Disconnecting a channel stops message sync and revokes this app's access to the account.", request_deletion: "Request data deletion",
       not_enabled: "Connecting channels is not enabled yet.", disc_not_enabled: "Disconnecting channels is not enabled yet.",
@@ -42,12 +42,18 @@
       comments: "Comments", no_comments: "No comments yet.", on_post: "On post", reply: "Reply", replied: "Replied", reply_to: "Reply to ", cancel: "Cancel",
       sent_by: "Sent from MDP Omni", err_window: "The 24-hour reply window is closed.", err_empty: "Write a message first.", now: "now",
       disconnect_confirm: "Disconnect this account? We will stop receiving its messages and comments.", disconnected: "Account disconnected.", refresh: "Refresh", refreshing: "Refreshing…",
-      not_sent_expired: "Not sent: the Instagram connection expired. Reconnect it in Integrations.", not_sent_unavailable: "Not sent: Instagram is unavailable. Try again.", not_sent_rejected: "Not sent: Instagram rejected the message.",
+      not_sent_expired: "Not sent: the connection expired. Reconnect it in Integrations.", not_sent_unavailable: "Not sent: the channel is unavailable. Try again.", not_sent_rejected: "Not sent: the channel rejected the message.",
       ig_connected: "Instagram connected.", ig_connected_warn: "Instagram connected, but real-time updates could not be confirmed. Use Refresh in Comments.",
       ig_denied: "The Instagram connection was cancelled.", ig_state: "The connection request expired or could not be verified. Please try again.",
       ig_exchange: "Instagram did not accept the authorization. Please try again.", ig_not_professional: "This must be an Instagram professional account (Business or Creator).",
       ig_permissions: "Please allow all requested permissions to connect.", ig_already_connected: "This Instagram account is already connected to another workspace.",
-      ig_disabled: "Connecting Instagram is not enabled yet.", ig_setup: "Setup is incomplete. Please contact support."
+      ig_disabled: "Connecting Instagram is not enabled yet.", ig_setup: "Setup is incomplete. Please contact support.",
+      fb_connected: "Facebook Page connected.", fb_connected_webhook: "Facebook Page connected, but real-time updates could not be confirmed. Use Refresh in Comments.",
+      fb_connected_pages: "Facebook Page connected. You allowed more than one Page; the first one was connected. Reconnect and choose only the Page you want.",
+      fb_denied: "The Facebook connection was cancelled.", fb_state: "The connection request expired or could not be verified. Please try again.",
+      fb_exchange: "Facebook did not accept the authorization. Please try again.", fb_permissions: "Please allow all requested permissions to connect.",
+      fb_no_page: "No Page was available. Choose a Page you manage with full access and try again.", fb_already_connected: "This Facebook Page is already connected to another workspace.",
+      fb_disabled: "Connecting Facebook is not enabled yet.", fb_setup: "Setup is incomplete. Please contact support."
     },
     pt: {
       signin: "Entrar", signin_sub: "Use seu e-mail e senha para acessar seu workspace.", email: "E-mail", password: "Senha",
@@ -66,7 +72,7 @@
       ig_desc: "Receba mensagens diretas e comentários dos seus posts e responda pelo MDP Omni. Você entrará com o Instagram.",
       fb_desc: "Receba conversas do Messenger e comentários nos posts da sua Página e responda pelo MDP Omni. Você entrará com o Facebook e escolherá qual Página conectar.",
       connect_ig: "Conectar Instagram", connect_fb: "Conectar Página do Facebook", reconnect: "Reconectar", disconnect: "Desconectar",
-      access_granted: "Acesso concedido", ig_scopes: "perfil, mensagens diretas, comentários", fb_scopes: "lista de Páginas, mensagens, comentários", connection: "Conexão", renews: "renova automaticamente",
+      access_granted: "Acesso concedido", ig_scopes: "perfil, mensagens diretas, comentários", fb_scopes: "lista de Páginas, mensagens, comentários", connection: "Conexão", renews: "renova automaticamente", no_expiry: "ativa até o acesso ser removido",
       you_choose: "Você escolhe", you_choose_v: "a conta e o que compartilhar", control: "Você no controle", control_v: "desconecte quando quiser",
       int_foot: "Desconectar um canal interrompe a sincronização de mensagens e revoga o acesso deste app à conta.", request_deletion: "Solicitar exclusão de dados",
       not_enabled: "A conexão de canais ainda não está habilitada.", disc_not_enabled: "A desconexão de canais ainda não está habilitada.",
@@ -77,12 +83,18 @@
       comments: "Comentários", no_comments: "Nenhum comentário ainda.", on_post: "No post", reply: "Responder", replied: "Respondido", reply_to: "Responder a ", cancel: "Cancelar",
       sent_by: "Enviado pelo MDP Omni", err_window: "A janela de resposta de 24h está fechada.", err_empty: "Escreva uma mensagem primeiro.", now: "agora",
       disconnect_confirm: "Desconectar esta conta? Deixaremos de receber suas mensagens e comentários.", disconnected: "Conta desconectada.", refresh: "Atualizar", refreshing: "Atualizando…",
-      not_sent_expired: "Não enviado: a conexão com o Instagram expirou. Reconecte em Integrações.", not_sent_unavailable: "Não enviado: o Instagram está indisponível. Tente de novo.", not_sent_rejected: "Não enviado: o Instagram recusou a mensagem.",
+      not_sent_expired: "Não enviado: a conexão expirou. Reconecte em Integrações.", not_sent_unavailable: "Não enviado: o canal está indisponível. Tente de novo.", not_sent_rejected: "Não enviado: o canal recusou a mensagem.",
       ig_connected: "Instagram conectado.", ig_connected_warn: "Instagram conectado, mas não foi possível confirmar as atualizações em tempo real. Use Atualizar em Comentários.",
       ig_denied: "A conexão com o Instagram foi cancelada.", ig_state: "O pedido de conexão expirou ou não pôde ser verificado. Tente novamente.",
       ig_exchange: "O Instagram não aceitou a autorização. Tente novamente.", ig_not_professional: "Precisa ser uma conta profissional do Instagram (Empresa ou Criador de conteúdo).",
       ig_permissions: "Autorize todas as permissões pedidas para conectar.", ig_already_connected: "Esta conta do Instagram já está conectada a outro workspace.",
-      ig_disabled: "A conexão com o Instagram ainda não está habilitada.", ig_setup: "A configuração está incompleta. Fale com o suporte."
+      ig_disabled: "A conexão com o Instagram ainda não está habilitada.", ig_setup: "A configuração está incompleta. Fale com o suporte.",
+      fb_connected: "Página do Facebook conectada.", fb_connected_webhook: "Página do Facebook conectada, mas não foi possível confirmar as atualizações em tempo real. Use Atualizar em Comentários.",
+      fb_connected_pages: "Página do Facebook conectada. Você autorizou mais de uma Página; a primeira foi conectada. Reconecte e escolha só a Página desejada.",
+      fb_denied: "A conexão com o Facebook foi cancelada.", fb_state: "O pedido de conexão expirou ou não pôde ser verificado. Tente novamente.",
+      fb_exchange: "O Facebook não aceitou a autorização. Tente novamente.", fb_permissions: "Autorize todas as permissões pedidas para conectar.",
+      fb_no_page: "Nenhuma Página disponível. Escolha uma Página que você administra com acesso total e tente de novo.", fb_already_connected: "Esta Página do Facebook já está conectada a outro workspace.",
+      fb_disabled: "A conexão com o Facebook ainda não está habilitada.", fb_setup: "A configuração está incompleta. Fale com o suporte."
     }
   };
 
@@ -320,7 +332,7 @@
             h("div", {}, h("div", { style: "font-weight:600", text: name }), i.handle ? h("div", { class: "meta", text: "@" + i.handle }) : null))
           : h("p", { class: "lead", style: "font-size:15px", text: ig ? t("ig_desc") : t("fb_desc") }),
         h("div", { class: "meta" },
-          connected ? [h("div", {}, h("b", { text: t("access_granted") + ": " }), ig ? t("ig_scopes") : t("fb_scopes")), h("div", {}, h("b", { text: t("connection") + ": " }), t("renews"))]
+          connected ? [h("div", {}, h("b", { text: t("access_granted") + ": " }), ig ? t("ig_scopes") : t("fb_scopes")), h("div", {}, h("b", { text: t("connection") + ": " }), ig ? t("renews") : t("no_expiry"))]
             : [h("div", {}, h("b", { text: t("you_choose") + ": " }), t("you_choose_v")), h("div", {}, h("b", { text: t("control") + ": " }), t("control_v"))]),
         h("div", { class: "acts" }, connected || reconnect
           ? [h("button", { class: "btn" + (reconnect ? " primary" : ""), type: "button", text: t("reconnect"), onclick: function () { act(i.provider, "POST"); } }),
@@ -510,8 +522,9 @@
   function readFlash() {
     var q = new URLSearchParams(window.location.search), res = null;
     if (q.get("ig") === "connected") res = { text: t(q.get("ig_warn") ? "ig_connected_warn" : "ig_connected"), err: false };
-    else if (q.get("ig_error")) {
-      var key = "ig_" + q.get("ig_error");
+    else if (q.get("fb") === "connected") res = { text: t(q.get("fb_warn") === "webhook" ? "fb_connected_webhook" : q.get("fb_warn") === "pages" ? "fb_connected_pages" : "fb_connected"), err: false };
+    else if (q.get("ig_error") || q.get("fb_error")) {
+      var key = q.get("ig_error") ? "ig_" + q.get("ig_error") : "fb_" + q.get("fb_error");
       res = { text: I18N.en[key] ? t(key) : t("err_generic"), err: true };
     }
     if (res) { try { window.history.replaceState(null, "", "/omni#integrations"); } catch (e) { /* ignore */ } }

@@ -128,8 +128,8 @@ def main():
         carla2 = next(c for c in client.get("/api/omni/comments", headers=H).json() if c["author_name"] == "Carla M.")
         check("A20 resposta aparece sob o comentario e ele NAO vira 'respondido'", len(carla2["replies"]) == 1 and carla2["replied"] is False)
         check("A21 comentario inexistente = 404", client.post(f"/api/omni/comments/{uuid4()}/reply", json={"text": "x"}, headers=H).status_code == 404)
-        check("A22 connect/disconnect = 501 (ainda desligado); provedor desconhecido = 404",
-              client.post("/api/omni/integrations/INSTAGRAM/connect", headers=H).status_code == 501 and client.delete("/api/omni/integrations/FACEBOOK", headers=H).status_code == 501 and client.post("/api/omni/integrations/TIKTOK/connect", headers=H).status_code == 404)
+        check("A22 connect = 501 (ainda desligado, Instagram e Facebook); provedor desconhecido = 404",
+              client.post("/api/omni/integrations/INSTAGRAM/connect", headers=H).status_code == 501 and client.post("/api/omni/integrations/FACEBOOK/connect", headers=H).status_code == 501 and client.post("/api/omni/integrations/TIKTOK/connect", headers=H).status_code == 404)
 
         # ------------------------------------------------------------- B. bloqueio do backoffice
         print("\n[B] Revisor NAO acessa o backoffice (cadastros e diagnostico)")

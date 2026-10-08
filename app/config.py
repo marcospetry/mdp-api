@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     instagram_app_id: str | None = None
     instagram_app_secret: str | None = None
     instagram_webhook_verify_token: str | None = None
+    # --- Facebook (Messenger + comentarios de Pagina): app principal MDP Omni, Facebook Login for Business ---
+    facebook_app_id: str | None = None
+    facebook_app_secret: str | None = None  # se vazio, usa META_WHATSAPP_APP_SECRET (mesmo app)
+    facebook_login_config_id: str | None = None
+    facebook_webhook_verify_token: str | None = None
     meta_graph_version: str = "v25.0"
 
     app_env: str = "production"
