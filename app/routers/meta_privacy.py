@@ -35,7 +35,7 @@ def _verified_user_id(raw: bytes, rota: str, content_type: str | None) -> str:
         raise HTTPException(status_code=404, detail="Not found")
     if len(raw) > MAX_BODY_BYTES:
         raise HTTPException(status_code=413, detail="Payload too large")
-    signed = meta_privacy.extract_signed_request(raw)
+    signed = meta_privacy.extract_signed_request(raw, content_type)
     payload = meta_privacy.parse_signed_request(signed, secrets_list)
     if payload is None:
         # so o motivo e nomes de campos: nunca o signed_request, o corpo nem segredos

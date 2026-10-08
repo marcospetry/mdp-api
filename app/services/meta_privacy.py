@@ -14,6 +14,8 @@ import hmac
 import json
 import re
 import secrets
+from email import policy as email_policy
+from email.parser import BytesParser
 from urllib.parse import parse_qs
 
 from sqlalchemy import text
@@ -37,14 +39,35 @@ def _b64url_decode(value: str) -> bytes:
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
-def extract_signed_request(raw_body: bytes) -> str | None:
-    """Le o campo signed_request do corpo form-urlencoded sem depender de python-multipart."""
+def extract_signed_request(raw_body: bytes, content_type: str | None = None) -> str | None:
+    """Le o campo signed_request do corpo, sem depender de python-multipart.
+
+    A Meta ja enviou o callback de desautorizacao como multipart/form-data e o de exclusao como form-urlencoded;
+    por isso os dois formatos sao aceitos (decidido pelo Content-Type; sem ele, tenta urlencoded).
+    """
+    if content_type and content_type.lower().lstrip().startswith("multipart/form-data"):
+        return _extract_multipart(raw_body, content_type)
     try:
         fields = parse_qs(raw_body.decode("utf-8", errors="strict"), keep_blank_values=False)
     except UnicodeDecodeError:
         return None
     values = fields.get("signed_request")
     return values[0] if values else None
+
+
+def _extract_multipart(raw_body: bytes, content_type: str) -> str | None:
+    try:
+        msg = BytesParser(policy=email_policy.HTTP).parsebytes(b"Content-Type: " + content_type.encode("latin-1", "ignore") + b"\r\n\r\n" + raw_body)
+        if not msg.is_multipart():
+            return None
+        for part in msg.iter_parts():
+            if part.get_param("name", header="content-disposition") == "signed_request" and not part.get_filename():
+                value = part.get_payload(decode=True)
+                text_value = value.decode("utf-8", errors="strict").strip() if value else ""
+                return text_value or None
+    except (ValueError, UnicodeError, LookupError):
+        return None
+    return None
 
 
 def parse_signed_request(signed_request: str | None, secrets_list: list[str]) -> dict | None:

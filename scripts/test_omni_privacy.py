@@ -63,6 +63,12 @@ def post_form(path: str, sr: str | None, raw: bytes | None = None):
     return client.post(path, content=body, headers={"content-type": "application/x-www-form-urlencoded"})
 
 
+def post_multipart(path: str, sr: str):
+    boundary = "------------------------DoXLPL"
+    body = (f'--{boundary}\r\nContent-Disposition: form-data; name="signed_request"\r\n\r\n{sr}\r\n--{boundary}--\r\n').encode()
+    return client.post(path, content=body, headers={"content-type": f"multipart/form-data; boundary={boundary}"})
+
+
 def payload_for(uid: str) -> dict:
     return {"algorithm": "HMAC-SHA256", "issued_at": int(time.time()), "user_id": uid}
 
@@ -197,6 +203,12 @@ def main():
         check("A10 extract_signed_request le o campo do formulario",
               meta_privacy.extract_signed_request(b"signed_request=abc.def&x=1") == "abc.def"
               and meta_privacy.extract_signed_request(b"x=1") is None and meta_privacy.extract_signed_request(b"\xff\xfe") is None)
+        mp = b'--XX\r\nContent-Disposition: form-data; name="signed_request"\r\n\r\nabc.def\r\n--XX--\r\n'
+        mp_ct = "multipart/form-data; boundary=XX"
+        check("A11 extract_signed_request le multipart/form-data (formato real do deauthorize)",
+              meta_privacy.extract_signed_request(mp, mp_ct) == "abc.def"
+              and meta_privacy.extract_signed_request(mp.replace(b"signed_request", b"outro"), mp_ct) is None
+              and meta_privacy.extract_signed_request(b"lixo", mp_ct) is None)
 
         # ------------------------------------------------------------------ B/C. protecao das rotas
         print("\n[B/C] Protecao das rotas")
@@ -264,6 +276,11 @@ def main():
         r3 = post_form("/api/meta/deauthorize", signed_request(payload_for(UNKNOWN_UID)))
         p3 = [x for x in pedidos("DESAUTORIZACAO") if x["status"] == "SEM_CORRESPONDENCIA"]
         check("E6 usuario desconhecido: 200 e registro SEM_CORRESPONDENCIA", r3.status_code == 200 and len(p3) == 1)
+        # a Meta ja enviou o deauthorize como multipart/form-data (log real): precisa ser aceito
+        r4 = post_multipart("/api/meta/deauthorize", signed_request(payload_for(APP_UID)))
+        check("E7 multipart/form-data valido -> 200", r4.status_code == 200 and r4.json() == {"received": True}, r4.text)
+        r5 = post_multipart("/api/meta/deauthorize", signed_request(payload_for(APP_UID), "outro-segredo"))
+        check("E8 multipart com assinatura invalida -> 403", r5.status_code == 403, r5.status_code)
 
         # ------------------------------------------------------------------ F. exclusao de dados
         print("\n[F] Exclusao de dados")
