@@ -26,7 +26,7 @@
       err_mfa_code: "Invalid verification code.", session_expired: "Your session expired. Please sign in again.",
       no_omni: "Your account does not have access to MDP Omni.",
       int_title: "Integrations", int_lead: "Connect your Instagram and Facebook accounts to receive messages and comments in one place, and reply from here.",
-      instagram: "Instagram", facebook_page: "Facebook Page", messenger: "Messenger",
+      instagram: "Instagram", facebook_page: "Facebook Page", facebook: "Facebook", messenger: "Messenger",
       st_NOT_CONNECTED: "Not connected", st_CONNECTED: "Connected", st_PENDING: "Pending", st_EXPIRING: "Expiring soon", st_EXPIRED: "Expired", st_REVOKED: "Disconnected", st_ERROR: "Error",
       ig_desc: "Receive direct messages and comments on your posts, and reply from MDP Omni. You will sign in with Instagram.",
       fb_desc: "Receive Messenger conversations and comments on your Page's posts, and reply from MDP Omni. You will sign in with Facebook and choose which Page to connect.",
@@ -67,7 +67,7 @@
       err_mfa_code: "Código de verificação inválido.", session_expired: "Sua sessão expirou. Entre novamente.",
       no_omni: "Sua conta não tem acesso ao MDP Omni.",
       int_title: "Integrações", int_lead: "Conecte suas contas do Instagram e do Facebook para receber mensagens e comentários em um só lugar e responder por aqui.",
-      instagram: "Instagram", facebook_page: "Página do Facebook", messenger: "Messenger",
+      instagram: "Instagram", facebook_page: "Página do Facebook", facebook: "Facebook", messenger: "Messenger",
       st_NOT_CONNECTED: "Não conectado", st_CONNECTED: "Conectado", st_PENDING: "Pendente", st_EXPIRING: "Expirando", st_EXPIRED: "Expirado", st_REVOKED: "Desconectado", st_ERROR: "Erro",
       ig_desc: "Receba mensagens diretas e comentários dos seus posts e responda pelo MDP Omni. Você entrará com o Instagram.",
       fb_desc: "Receba conversas do Messenger e comentários nos posts da sua Página e responda pelo MDP Omni. Você entrará com o Facebook e escolherá qual Página conectar.",
@@ -136,7 +136,7 @@
     if (diff < 1) return t("now");
     return d.toLocaleString(state.lang === "pt" ? "pt-BR" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
-  function channelLabel(c) { return c === "INSTAGRAM" ? t("instagram") : t("messenger"); }
+  function channelLabel(c) { return c === "INSTAGRAM" ? t("instagram") : t("facebook"); }
   function legalLinks() {
     return h("div", { class: "legal" },
       h("a", { href: legal().privacy, target: "_blank", rel: "noopener", text: t("privacy") }),
@@ -353,7 +353,7 @@
   /* ---------------------------------------------------------------- Inbox */
   function filterBar(current, onPick) {
     function b(code, label) { return h("button", { type: "button", class: current === code ? "on" : "", onclick: function () { onPick(code); }, text: label }); }
-    return h("div", { class: "filters" }, b(null, t("all")), b("INSTAGRAM", t("instagram")), b("FACEBOOK", t("messenger")));
+    return h("div", { class: "filters" }, b(null, t("all")), b("INSTAGRAM", t("instagram")), b("FACEBOOK", t("facebook")));
   }
   function errText(code) {
     if (code === "channel_not_connected") return t("not_sent");
