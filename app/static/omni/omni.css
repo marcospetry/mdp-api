@@ -8,6 +8,7 @@ button,input{font-family:inherit}
 input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .brand{font-weight:700;letter-spacing:.02em}.brand b{color:var(--blue)}
+.brand{display:inline-flex;align-items:center;gap:12px}.brand-logo{height:44px;width:auto;display:block}
 .btn{height:44px;padding:0 20px;border-radius:10px;border:1px solid var(--fieldline);background:transparent;color:var(--text);font-size:15px;font-weight:600;cursor:pointer}
 .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.danger{border-color:var(--redline);color:var(--red)}
@@ -25,7 +26,7 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(-
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:48px 20px}
 .login .box{width:100%;max-width:440px;display:flex;flex-direction:column;gap:28px}
 .login .top{display:flex;justify-content:space-between;align-items:center}
-.login .brand{font-size:28px}
+.login .brand{font-size:28px}.login .brand-logo{height:64px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:32px;display:flex;flex-direction:column;gap:20px}
 .card h1{margin:0;font-size:26px}.card p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
 .field{display:flex;flex-direction:column;gap:8px}.field label{font-size:14px;font-weight:600}
@@ -35,7 +36,7 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(-
 .lang button.on{color:var(--text);font-weight:600}
 /* shell */
 header.bar{min-height:68px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line2);background:var(--panel2);flex-wrap:wrap}
-header.bar .l{display:flex;align-items:center;gap:36px;flex-wrap:wrap}header.bar .brand{font-size:20px}
+header.bar .l{display:flex;align-items:center;gap:36px;flex-wrap:wrap}header.bar .brand{font-size:20px}header.bar .brand-logo{height:40px}
 nav.tabs{display:flex;gap:6px}
 nav.tabs a{padding:24px 14px 20px;font-size:15px;font-weight:500;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}
 nav.tabs a.on{color:#fff;font-weight:600;border-color:var(--blue)}

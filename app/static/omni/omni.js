@@ -118,6 +118,9 @@
     for (var i = 2; i < arguments.length; i++) append(node, arguments[i]);
     return node;
   }
+  function brand() {
+    return h("div", { class: "brand" }, h("img", { class: "brand-logo", src: "/omni-assets/logo-mdp.png", alt: "MDP Consultoria" }), h("b", { text: "Omni" }));
+  }
   function append(node, child) {
     if (child === null || child === undefined || child === false) return;
     if (Array.isArray(child)) { child.forEach(function (c) { append(node, c); }); return; }
@@ -227,7 +230,7 @@
       h("div", { class: "field" }, h("label", { for: "password", text: t("password") }), passIn),
       submit);
     clear(app).appendChild(h("div", { class: "login" }, h("div", { class: "box" },
-      h("div", { class: "top" }, h("div", { class: "brand" }, "MDP ", h("b", { text: "Omni" })), langSwitch(function () { renderLogin(null, { email: emailIn.value }); })),
+      h("div", { class: "top" }, brand(), langSwitch(function () { renderLogin(null, { email: emailIn.value }); })),
       form, legalLinks())));
     emailIn.focus();
   }
@@ -251,7 +254,7 @@
       msg, h("div", { class: "field" }, h("label", { for: "code", text: t("mfa_code") }), code),
       submit, h("button", { class: "btn", type: "button", text: t("back"), onclick: function () { renderLogin(); } }));
     clear(app).appendChild(h("div", { class: "login" }, h("div", { class: "box" },
-      h("div", { class: "top" }, h("div", { class: "brand" }, "MDP ", h("b", { text: "Omni" })), langSwitch(function () { renderMfa(preauth); })), form, legalLinks())));
+      h("div", { class: "top" }, brand(), langSwitch(function () { renderMfa(preauth); })), form, legalLinks())));
     code.focus();
   }
 
@@ -279,7 +282,7 @@
       return h("a", { href: "#" + k, class: state.tab === k ? "on" : "", "aria-current": state.tab === k ? "page" : null, onclick: function (ev) { ev.preventDefault(); location.hash = k; state.tab = k; route(); }, text: tabLabels[k] });
     }));
     var bar = h("header", { class: "bar" },
-      h("div", { class: "l" }, h("div", { class: "brand" }, "MDP ", h("b", { text: "Omni" })), nav),
+      h("div", { class: "l" }, brand(), nav),
       h("div", { class: "r" },
         h("span", { class: "ws", text: t("workspace") + ": " + (state.me.tenant_nome || "") }),
         h("span", { text: state.me.nome || "" }),
