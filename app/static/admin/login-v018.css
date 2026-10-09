@@ -30,8 +30,7 @@ button{cursor:pointer}
 .shell{
   min-height:100vh;
   display:grid;
-  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
-  align-items:stretch;
+  grid-template-columns:1fr;
 }
 
 .brand-panel{
@@ -583,4 +582,65 @@ button:disabled{opacity:.45;cursor:not-allowed}
   #dlgAplicacaoDiagnostico .dialog-actions > button{
     flex:1 1 150px;
   }
+}
+
+
+/* ===== Login minimalista (igual ao /omni) =====
+   Só vale fora do backoffice (body.admin-authenticated mantém o layout antigo). */
+body:not(.admin-authenticated){background:var(--bg)}
+body:not(.admin-authenticated) .auth-panel{
+  min-height:100vh;
+  padding:48px 20px;
+  gap:28px;
+}
+body:not(.admin-authenticated) .login-top,
+body:not(.admin-authenticated) .card,
+body:not(.admin-authenticated) .legal{width:100%;max-width:440px}
+.login-logo{display:block;height:64px;width:auto}
+body:not(.admin-authenticated) .card{
+  background:#172331;
+  border:1px solid #26364a;
+  border-radius:14px;
+  padding:32px;
+  box-shadow:none;
+}
+body:not(.admin-authenticated) .step h2{margin:0 0 8px;font-size:26px;letter-spacing:0}
+body:not(.admin-authenticated) .step .muted{margin:0;font-size:15px;color:#9fb1c4}
+body:not(.admin-authenticated) .step form{display:flex;flex-direction:column;margin-top:20px}
+body:not(.admin-authenticated) .step label{margin:20px 0 8px;color:#e8eef5;font-size:14px;font-weight:600}
+body:not(.admin-authenticated) .step form > label:first-child{margin-top:0}
+body:not(.admin-authenticated) #loginStep .kicker,
+body:not(.admin-authenticated) #mfaStep .kicker,
+body:not(.admin-authenticated) #mfaSetupStep .kicker{display:none}
+body:not(.admin-authenticated) .step input:not([type="checkbox"]){
+  height:48px;
+  padding:0 14px;
+  border-radius:10px;
+  border:1px solid #2f4259;
+  background:#0d141d;
+  color:#e8eef5;
+  font-size:16px;
+}
+body:not(.admin-authenticated) .step input:not([type="checkbox"]):focus{border-color:#1588d4;box-shadow:none;outline:2px solid #1588d4;outline-offset:2px}
+body:not(.admin-authenticated) .step .primary{
+  height:44px;
+  margin:24px 0 0;
+  padding:0 20px;
+  border-radius:10px;
+  font-size:15px;
+  font-weight:600;
+}
+body:not(.admin-authenticated) .platform-login-option{margin:20px 0 0}
+body:not(.admin-authenticated) .platform-login-option span{font-size:14px;font-weight:600}
+body:not(.admin-authenticated) .step .platform-login-help{margin:8px 0 0;font-size:13px}
+body:not(.admin-authenticated) .step .otp{font-size:26px}
+
+.legal{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;font-size:14px}
+.legal a{color:#6db6ea}
+.legal a:hover{color:#a6d3f5}
+body.admin-authenticated .login-top,
+body.admin-authenticated .legal{display:none}
+
+@media(max-width:520px){
+  body:not(.admin-authenticated) .card{padding:26px 20px}
 }
