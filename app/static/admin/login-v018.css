@@ -30,7 +30,8 @@ button{cursor:pointer}
 .shell{
   min-height:100vh;
   display:grid;
-  grid-template-columns:1fr;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+  align-items:stretch;
 }
 
 .brand-panel{
@@ -42,10 +43,12 @@ button{cursor:pointer}
 }
 
 .logo{
-  width:min(310px,70%);
-  height:auto;
+  width:auto;
+  height:72px;
+  max-width:100%;
   object-fit:contain;
-  margin-bottom:34px;
+  align-self:flex-start;
+  margin-bottom:40px;
 }
 
 .eyebrow,.kicker{
@@ -130,6 +133,24 @@ input{
   transition:.15s ease;
 }
 input:focus{border-color:#56b8ff;box-shadow:0 0 0 3px rgba(86,184,255,.12)}
+
+/* Opção "Administrar Plataforma MDP": checkbox ao lado do texto */
+.platform-login-option{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:20px 0 6px;
+  cursor:pointer;
+}
+.platform-login-option input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  padding:0;
+  margin:0;
+  flex:0 0 auto;
+  accent-color:var(--blue);
+}
+.platform-login-help{margin:0 0 22px;font-size:13px}
 
 .password-wrap{position:relative}
 .password-wrap input{padding-right:82px}
@@ -244,7 +265,7 @@ input:focus{border-color:#56b8ff;box-shadow:0 0 0 3px rgba(86,184,255,.12)}
   .brand-panel h1{font-size:36px}
   .brand-copy{font-size:15px}
   .security-note{margin-top:20px}
-  .logo{width:220px;margin-bottom:22px}
+  .logo{height:56px;margin-bottom:22px}
   .auth-panel{min-height:auto;padding:20px 20px 44px}
 }
 @media(max-width:520px){
